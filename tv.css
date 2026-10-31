@@ -1,0 +1,130 @@
+/* Dart Dębica TV – ekran meczów na żywo pod telewizor (projekt pod 1920×1080, skaluje się do każdego ekranu) */
+:root {
+  --tlo: #07121a;
+  --karta: #0c1d29;
+  --karta2: #0f2533;
+  --linia: #1f3d4e;
+  --turkus: #2ad1c9;
+  --turkus-c: #1aa39c;
+  --zloto: #f2b134;
+  --tekst: #e6eef2;
+  --szary: #8aa1ad;
+  --s: 1; /* skala kart – ustawia tv.js zależnie od liczby meczów na stronie */
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+/* 1rem = 16 px przy 1920×1080; na innych ekranach proporcjonalnie */
+html { font-size: min(calc(100vw / 120), calc(100vh / 67.5)); }
+html, body { height: 100%; overflow: hidden; background: var(--tlo); color: var(--tekst); }
+body {
+  font-family: Inter, system-ui, sans-serif;
+  background:
+    radial-gradient(60% 50% at 85% -10%, rgba(42, 209, 201, 0.16), transparent 70%),
+    radial-gradient(50% 40% at 0% 110%, rgba(42, 209, 201, 0.08), transparent 70%),
+    var(--tlo);
+  cursor: default;
+}
+body.bez-kursora { cursor: none; }
+.cond { font-family: 'Barlow Condensed', Inter, sans-serif; }
+
+.ekran { height: 100vh; width: 100vw; display: grid; grid-template-rows: 6.5rem 1fr 3.75rem; position: relative; }
+
+/* ---------- góra ---------- */
+.gora { display: flex; align-items: center; gap: 1.25rem; padding: 0 2rem; border-bottom: 1px solid var(--linia); box-shadow: inset 0 -2px 0 var(--turkus-c); }
+.logo { height: 4.5rem; width: 4.5rem; border-radius: 50%; object-fit: cover; box-shadow: 0 0 1.5rem -0.3rem rgba(42, 209, 201, 0.6); }
+.tytuly { flex: 1; min-width: 0; }
+.nadtytul { display: flex; align-items: center; gap: 0.6rem; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.35rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--turkus); }
+.kropka { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: #e23b3b; box-shadow: 0 0 0 0 rgba(226, 59, 59, 0.6); animation: puls 1.6s infinite; }
+@keyframes puls { 70% { box-shadow: 0 0 0 0.7rem rgba(226, 59, 59, 0); } 100% { box-shadow: 0 0 0 0 rgba(226, 59, 59, 0); } }
+h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 2.9rem; line-height: 1; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zegar { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 3.2rem; font-variant-numeric: tabular-nums; color: var(--tekst); }
+.strony { display: flex; gap: 0.5rem; align-items: center; font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--szary); letter-spacing: 0.1em; text-transform: uppercase; margin-right: 1rem; }
+.strony i { display: block; width: 0.9rem; height: 0.9rem; border-radius: 50%; background: var(--linia); }
+.strony i.ta { background: var(--turkus); }
+
+/* ---------- środek ---------- */
+.srodek { display: grid; grid-template-columns: 1fr 25rem; gap: 1.25rem; padding: 1.25rem 1.5rem 1.25rem 2rem; min-height: 0; }
+.mecze { display: grid; gap: 1rem; min-height: 0; grid-template-columns: repeat(var(--k, 3), minmax(0, 1fr)); grid-template-rows: repeat(var(--w, 2), minmax(0, 1fr)); }
+.mecze.zmiana { animation: zmiana 0.6s ease-out; }
+@keyframes zmiana { from { opacity: 0; transform: translateX(2rem); } to { opacity: 1; transform: none; } }
+
+.karta {
+  position: relative; min-height: 0; overflow: hidden;
+  display: grid; grid-template-rows: auto 1fr 1fr; gap: calc(0.35rem * var(--s));
+  padding: calc(0.8rem * var(--s)) calc(1rem * var(--s));
+  border-radius: 0.9rem; border: 1px solid var(--linia);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)), var(--karta);
+  transition: box-shadow 0.4s, border-color 0.4s;
+}
+.karta.akcja { border-color: var(--zloto); box-shadow: 0 0 2.2rem -0.4rem rgba(242, 177, 52, 0.75), inset 0 0 1.5rem -0.8rem rgba(242, 177, 52, 0.6); }
+.k-gora { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; font-size: calc(1rem * var(--s)); color: var(--szary); white-space: nowrap; overflow: hidden; }
+.k-gora .k-faza { color: var(--turkus); overflow: hidden; text-overflow: ellipsis; }
+
+.k-gracz { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: calc(0.8rem * var(--s)); padding: 0 calc(0.6rem * var(--s)); border-radius: 0.6rem; min-height: 0; position: relative; }
+.k-gracz.rzuca { background: rgba(42, 209, 201, 0.09); }
+.k-gracz.rzuca::before { content: ''; position: absolute; left: 0; top: 18%; bottom: 18%; width: calc(0.3rem * var(--s)); border-radius: 0.3rem; background: var(--turkus); box-shadow: 0 0 0.8rem var(--turkus); }
+.k-kto { min-width: 0; }
+.k-nazwa { display: block; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: calc(2.05rem * var(--s)); line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.k-pod { display: flex; flex-wrap: wrap; align-items: center; column-gap: calc(0.45rem * var(--s)); row-gap: 0.5rem; height: calc(1.45rem * var(--s)); margin-top: calc(0.15rem * var(--s)); font-size: calc(1.05rem * var(--s)); color: var(--szary); overflow: hidden; font-variant-numeric: tabular-nums; }
+.k-pod > span:first-child:not(.chip) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.chip { flex-shrink: 0; }
+.chip { display: inline-block; padding: 0 calc(0.4rem * var(--s)); border-radius: 0.35rem; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: calc(1.05rem * var(--s)); letter-spacing: 0.03em; line-height: 1.35; }
+.chip.c180 { background: var(--zloto); color: #1a1205; }
+.chip.c171 { background: var(--turkus); color: #062320; }
+.chip.chf { border: 1px solid var(--zloto); color: var(--zloto); }
+.chip.cbl { border: 1px solid var(--turkus); color: var(--turkus); }
+.k-zostalo { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: calc(2.6rem * var(--s)); color: var(--tekst); font-variant-numeric: tabular-nums; min-width: calc(3.6rem * var(--s)); text-align: right; }
+.k-gracz.rzuca .k-zostalo { color: var(--turkus); }
+.k-legi { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: calc(2.9rem * var(--s)); min-width: calc(3.1rem * var(--s)); text-align: center; border-radius: 0.5rem; background: var(--tlo); border: 1px solid var(--linia); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.k-gracz.prowadzi .k-legi { color: var(--turkus); border-color: rgba(42, 209, 201, 0.5); }
+.k-sety { color: var(--zloto); }
+
+.pusto { grid-column: 1 / -1; grid-row: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1rem; border: 1px dashed var(--linia); border-radius: 1rem; }
+.pusto b { font-family: 'Barlow Condensed', sans-serif; font-size: 3.4rem; text-transform: uppercase; font-weight: 800; }
+.pusto span { font-size: 1.6rem; color: var(--szary); max-width: 50rem; }
+
+/* ---------- panel boczny: wyróżnienia ---------- */
+.boczny { min-height: 0; overflow: hidden; border-radius: 1rem; border: 1px solid var(--linia); background: linear-gradient(180deg, rgba(242, 177, 52, 0.07), rgba(255, 255, 255, 0.01) 30%), var(--karta); padding: 1.1rem 1.25rem; display: flex; flex-direction: column; }
+.boczny h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--zloto); margin-bottom: 0.6rem; }
+#wyroznienia { display: flex; flex-direction: column; gap: 0.9rem; min-height: 0; flex: 1; overflow: hidden; }
+.w-sekcja h3 { display: flex; align-items: center; justify-content: space-between; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.25rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--szary); border-bottom: 1px solid var(--linia); padding-bottom: 0.25rem; margin-bottom: 0.3rem; }
+.w-sekcja h3 .chip { font-size: 1.2rem; }
+.w-wiersz { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; font-size: 1.3rem; line-height: 1.55; }
+.w-wiersz span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.w-wiersz b { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.55rem; color: var(--zloto); font-variant-numeric: tabular-nums; }
+.w-wiersz.nowe { animation: blysk 2.5s ease-out; }
+@keyframes blysk { 0%, 30% { background: rgba(242, 177, 52, 0.25); } 100% { background: transparent; } }
+.w-brak { font-size: 1.1rem; color: var(--szary); opacity: 0.7; }
+.w-wiecej { font-size: 1rem; color: var(--szary); }
+
+/* ---------- dolny pasek z wynikami ---------- */
+.pasek { display: flex; align-items: stretch; border-top: 1px solid var(--linia); background: rgba(10, 24, 34, 0.95); overflow: hidden; }
+.pasek-etykieta { display: flex; align-items: center; padding: 0 1.5rem; background: var(--turkus); color: var(--tlo); font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.6rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.pasek-okno { flex: 1; overflow: hidden; position: relative; display: flex; align-items: center; mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); }
+.pasek-tasma { display: flex; white-space: nowrap; will-change: transform; animation: tasma var(--czas, 60s) linear infinite; }
+.pasek-tasma.stoi { animation: none; }
+@keyframes tasma { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.t-mecz { display: inline-flex; align-items: center; gap: 0.7rem; padding: 0 2.2rem; font-size: 1.5rem; font-weight: 600; border-right: 1px solid var(--linia); }
+.t-mecz b { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.85rem; color: var(--turkus); font-variant-numeric: tabular-nums; }
+.t-mecz small { font-size: 1.1rem; color: var(--szary); }
+
+/* ---------- wyskakujące okienko (180, 171, HF, szybki leg) ---------- */
+.wyskok-warstwa { position: absolute; left: 0; right: 25rem; bottom: 5.5rem; display: flex; justify-content: center; pointer-events: none; z-index: 5; }
+.wyskok { display: flex; align-items: center; gap: 1.6rem; padding: 1.2rem 2.4rem 1.2rem 1.4rem; border-radius: 1.4rem; background: rgba(7, 18, 26, 0.96); border: 2px solid var(--zloto); box-shadow: 0 0 4rem -0.5rem rgba(242, 177, 52, 0.7), 0 1.5rem 3rem rgba(0, 0, 0, 0.6); animation: wskok 0.5s cubic-bezier(.2, .9, .3, 1.3); }
+.wyskok.turkus { border-color: var(--turkus); box-shadow: 0 0 4rem -0.5rem rgba(42, 209, 201, 0.7), 0 1.5rem 3rem rgba(0, 0, 0, 0.6); }
+.wyskok.znika { animation: znika 0.4s ease-in forwards; }
+.wyskok .duzy { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 6rem; line-height: 0.9; color: var(--zloto); min-width: 8rem; text-align: center; }
+.wyskok.turkus .duzy { color: var(--turkus); }
+.wyskok .opis { display: flex; flex-direction: column; gap: 0.25rem; }
+.wyskok .rodzaj { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--szary); }
+.wyskok .kto { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 3.4rem; line-height: 1; text-transform: uppercase; }
+.wyskok .vs { font-size: 1.4rem; color: var(--szary); }
+@keyframes wskok { from { opacity: 0; transform: translateY(3rem) scale(0.9); } to { opacity: 1; transform: none; } }
+@keyframes znika { to { opacity: 0; transform: translateY(1.5rem) scale(0.96); } }
+
+/* pasek postępu do zmiany strony */
+.postep { position: absolute; left: 0; bottom: 3.75rem; height: 0.25rem; background: var(--turkus); width: 0; opacity: 0.8; }
+.postep.biegnie { animation: postep var(--strona, 15s) linear forwards; }
+@keyframes postep { from { width: 0; } to { width: 100%; } }
+
+.pelny { position: fixed; right: 1.5rem; bottom: 4.6rem; z-index: 10; padding: 0.7rem 1.4rem; border-radius: 0.6rem; border: 1px solid var(--turkus); background: rgba(7, 18, 26, 0.9); color: var(--turkus); font: 600 1.2rem Inter, sans-serif; cursor: pointer; transition: opacity 0.4s; }
+body.bez-kursora .pelny, .pelny.ukryj { opacity: 0; pointer-events: none; }

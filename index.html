@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dart Dębica TV</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="img/favicon-64.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tv.css">
+</head>
+<body>
+  <div class="ekran">
+    <header class="gora">
+      <img class="logo" src="img/logo.png" alt="Stowarzyszenie Dart Dębica">
+      <div class="tytuly">
+        <p class="nadtytul"><span class="kropka"></span><span id="licznik">Na żywo</span></p>
+        <h1 id="tytul">Dart Dębica TV</h1>
+      </div>
+      <div class="strony" id="strony" hidden></div>
+      <div class="zegar" id="zegar">--:--</div>
+    </header>
+
+    <main class="srodek">
+      <section class="mecze" id="mecze" aria-live="off"></section>
+      <aside class="boczny" id="boczny">
+        <h2>Wyróżnienia turnieju</h2>
+        <div id="wyroznienia"></div>
+      </aside>
+    </main>
+
+    <footer class="pasek" id="pasek">
+      <span class="pasek-etykieta">Wyniki</span>
+      <div class="pasek-okno"><div class="pasek-tasma" id="tasma"></div></div>
+    </footer>
+
+    <div class="wyskok-warstwa" id="wyskok"></div>
+    <div class="postep" id="postep"></div>
+  </div>
+
+  <button type="button" class="pelny" id="pelny">Pełny ekran</button>
+
+  <script src="tv.js"></script>
+</body>
+</html>
