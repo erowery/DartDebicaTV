@@ -10,6 +10,7 @@
   const CZAS_STRONY_MS = 15000; // gdy mecze się nie mieszczą – zmiana strony
   const CZAS_WYSKOKU_MS = 6500;
   const SZYBKI_LEG = 18;
+  const OKNO_TURNIEJU_S = 14 * 3600; // mecze starsze niż 14 h (np. testowe sprzed turnieju) pomijamy
   const HIGH_FINISH = 100;
 
   const $ = (s) => document.querySelector(s);
@@ -49,6 +50,7 @@
     mecze: new Map(), // mid -> { lista, szczegoly, podpis, ostatnioPobrany, kolejnosc }
     zdarzenia: [], // wszystkie wykryte wydarzenia
     widziane: new Set(),
+    przeanalizowane: new Set(),
     pierwszeSprawdzenie: true,
     strona: 0,
     licznikKolejnosci: 0,
@@ -191,6 +193,7 @@
       stan.mecze.clear();
       stan.zdarzenia = [];
       stan.widziane.clear();
+      stan.przeanalizowane.clear();
       stan.pierwszeSprawdzenie = true;
       stan.strona = 0;
       stan.wyskoki = [];
@@ -259,7 +262,9 @@
     w.pilne = false;
     let d = null;
     try {
-      d = polacz(w.lista, await pobierzWidok(w.mid));
+      const v = await pobierzWidok(w.mid);
+      if (Number(v.data.updateTime) > 0) w.aktualizacja = Number(v.data.updateTime);
+      d = polacz(w.lista, v);
     } catch (e) {
       try {
         const j = await pobierzJson('/match/get?mid=' + encodeURIComponent(w.mid));
@@ -278,8 +283,9 @@
   let wTrakcie = 0;
   function tykniecie() {
     const teraz = Date.now();
-    const kolej = aktywne()
-      .filter((w) => !w.pobieram && (w.pilne || teraz - (w.ostatnio || 0) >= CO_ILE_MECZ_MS))
+    // sprawdzamy też mecze wyglądające na porzucone (rzadziej, co 30 s) – mogą wrócić do gry
+    const kolej = Array.from(stan.mecze.values())
+      .filter((w) => !w.koniec && !w.pobieram && (w.pilne || teraz - (w.ostatnio || 0) >= (teraz - ostatniRuch(w) < PORZUCONY_MS || !w.szczegoly ? CO_ILE_MECZ_MS : 30000)))
       .sort((a, b) => (b.pilne ? 1 : 0) - (a.pilne ? 1 : 0) || (a.ostatnio || 0) - (b.ostatnio || 0));
     for (const w of kolej) {
       if (wTrakcie >= 6) break;
@@ -334,10 +340,20 @@
       let lista;
       try {
         const j = await pobierzJson('/match/list?tdid=' + encodeURIComponent(stan.tdid) + '&live=1', 6000);
-        lista = (j.list || []).filter((m) => m.mid && (!m.tmid || String(m.tmid).startsWith(stan.tdid)));
+        const od = Date.now() / 1000 - OKNO_TURNIEJU_S;
+        lista = (j.list || []).filter((m) => m.mid && (!m.tmid || String(m.tmid).startsWith(stan.tdid)) && Number(m.startTime) >= od);
       } catch (e) {
         return; // Nakka chwilowo nie odpowiada – zostaje to, co na ekranie
       }
+      // zakończone mecze turnieju, których jeszcze nie przeanalizowaliśmy (np. sprzed włączenia ekranu)
+      const doAnalizy = lista.filter((m) => (Number(m.endMatch) === 1 || m.endMatch === true) && !stan.przeanalizowane.has(m.mid) && !stan.mecze.has(m.mid)).slice(0, 6);
+      await Promise.all(doAnalizy.map(async (m) => {
+        try {
+          const j = await pobierzJson('/match/get?mid=' + encodeURIComponent(m.mid));
+          const d = j.match || j;
+          if (d && d.legData) { przyjmijZdarzenia(wydarzeniaMeczu(m.mid, d), true); stan.przeanalizowane.add(m.mid); }
+        } catch (e) { /* następnym razem */ }
+      }));
       const obecne = new Set();
       const koncowe = [];
       lista.forEach((m) => {
@@ -363,7 +379,7 @@
       stan.doNarysowania = true;
       // pierwsze wczytanie: wszystkie trwające mecze od razu (to, co już było, nie wyskakuje w okienkach)
       if (stan.pierwszeSprawdzenie) {
-        const brak = aktywne().filter((w) => !w.szczegoly && !w.pobieram);
+        const brak = Array.from(stan.mecze.values()).filter((w) => !w.koniec && !w.szczegoly && !w.pobieram);
         for (let i = 0; i < brak.length; i += 6) await Promise.all(brak.slice(i, i + 6).map((w) => pobierzMecz(w)));
         stan.pierwszeSprawdzenie = false;
       }
@@ -373,12 +389,12 @@
     }
   }
 
-  function przyjmijZdarzenia(lista) {
+  function przyjmijZdarzenia(lista, stare) {
     let cos = false;
     lista.forEach((z) => {
       if (stan.widziane.has(z.klucz)) return;
       stan.widziane.add(z.klucz);
-      z.stare = stan.pierwszeSprawdzenie;
+      z.stare = stare || stan.pierwszeSprawdzenie;
       z.czas = Date.now();
       stan.zdarzenia.push(z);
       cos = true;
@@ -471,8 +487,24 @@
       gracz(0) + gracz(1) + '</article>';
   }
 
+  const PORZUCONY_MS = 15 * 60 * 1000;
+  function ostatniRuch(w) {
+    const u = Number(w.aktualizacja) || 0;
+    return Math.max(u, (Number(w.lista && w.lista.startTime) || 0) * 1000);
+  }
+  /** Trwające mecze. Pomija porzucone (bez wpisu od 15 minut) i stare zapisy tego samego zawodnika. */
   function aktywne() {
-    return Array.from(stan.mecze.values()).filter((w) => !w.koniec).sort((a, b) => a.kolejnosc - b.kolejnosc);
+    const teraz = Date.now();
+    const lista = Array.from(stan.mecze.values()).filter((w) => !w.koniec && teraz - ostatniRuch(w) < PORZUCONY_MS);
+    lista.sort((a, b) => (Number(b.lista.startTime) || 0) - (Number(a.lista.startTime) || 0));
+    const zajeci = new Set();
+    const wynik = lista.filter((w) => {
+      const tp = (w.lista.statsData || []).map((x) => x.tpid).filter(Boolean);
+      if (tp.some((t) => zajeci.has(t))) return false;
+      tp.forEach((t) => zajeci.add(t));
+      return true;
+    });
+    return wynik.sort((a, b) => a.kolejnosc - b.kolejnosc);
   }
 
   function rysujMecze() {
@@ -584,20 +616,17 @@
 
     // 180: większa z liczb – ze statystyk turnieju albo z wykrytych w meczach (żeby nie liczyć podwójnie)
     const ile180 = {};
-    Object.entries(stan.staty).forEach(([tpid, s]) => { if (Number(s.ton80) > 0) ile180[tpid] = Number(s.ton80); });
     const z180 = {};
     zd.filter((z) => z.typ === '180').forEach((z) => { z180[z.tpid] = (z180[z.tpid] || 0) + 1; });
-    Object.entries(z180).forEach(([tpid, n]) => { ile180[tpid] = Math.max(ile180[tpid] || 0, n); });
+    Object.entries(z180).forEach(([tpid, n]) => { ile180[tpid] = n; });
 
     const ile171 = {};
     zd.filter((z) => z.typ === '171').forEach((z) => { ile171[z.tpid] = (ile171[z.tpid] || 0) + 1; });
 
     const hf = {};
-    Object.entries(stan.staty).forEach(([tpid, s]) => { if (Number(s.highOut) >= HIGH_FINISH) hf[tpid] = Number(s.highOut); });
     zd.filter((z) => z.typ === 'hf').forEach((z) => { hf[z.tpid] = Math.max(hf[z.tpid] || 0, z.w); });
 
     const bl = {};
-    Object.entries(stan.staty).forEach(([tpid, s]) => { const b = Number(s.best); if (b >= 9 && b <= SZYBKI_LEG) bl[tpid] = b; });
     zd.filter((z) => z.typ === 'bl').forEach((z) => { bl[z.tpid] = Math.min(bl[z.tpid] || 99, z.w); });
 
     const sekcja = (typ, tytul, obj, malejaco, format) => {
