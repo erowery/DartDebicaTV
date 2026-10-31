@@ -85,9 +85,15 @@ h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 2
 /* ---------- panel boczny: wyróżnienia ---------- */
 .boczny { min-height: 0; overflow: hidden; border-radius: 1rem; border: 1px solid var(--linia); background: linear-gradient(180deg, rgba(242, 177, 52, 0.07), rgba(255, 255, 255, 0.01) 30%), var(--karta); padding: 1.1rem 1.25rem; display: flex; flex-direction: column; }
 .boczny h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--zloto); margin-bottom: 0.6rem; }
-#wyroznienia { display: flex; flex-direction: column; gap: 0.9rem; min-height: 0; flex: 1; overflow: hidden; }
-.w-sekcja h3 { display: flex; align-items: center; justify-content: space-between; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.25rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--szary); border-bottom: 1px solid var(--linia); padding-bottom: 0.25rem; margin-bottom: 0.3rem; }
-.w-sekcja h3 .chip { font-size: 1.2rem; }
+#wyroznienia { display: flex; flex-direction: column; gap: 0.8rem; min-height: 0; flex: 1; overflow: hidden; }
+.w-sekcja { flex: 1 1 0; min-height: 4.6rem; display: flex; flex-direction: column; }
+.w-sekcja h3 { flex-shrink: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.45rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--szary); border-bottom: 1px solid var(--linia); padding-bottom: 0.2rem; margin-bottom: 0.3rem; }
+.w-180 h3 { color: var(--zloto); }
+.w-171 h3 { color: var(--turkus); }
+.w-lista { flex: 1; min-height: 0; overflow: hidden; mask-image: linear-gradient(180deg, transparent, #000 8%, #000 86%, transparent); }
+.w-tasma.jedzie { animation: wGore var(--czas, 20s) linear infinite; }
+@keyframes wGore { 0%, 6% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
+.w-odstep { height: 1.2rem; }
 .w-wiersz { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; font-size: 1.3rem; line-height: 1.55; }
 .w-wiersz span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .w-wiersz b { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.55rem; color: var(--zloto); font-variant-numeric: tabular-nums; }

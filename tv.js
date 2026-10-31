@@ -88,7 +88,7 @@
     return { r, start: start > 0 ? start : 501 };
   }
 
-  /** Wydarzenia z meczu: 180, 171, szybki leg (≤18 lotek), high finish (100+). */
+  /** Wydarzenia z meczu: 180, 171, szybki leg (do 18 lotki), high finish (100+). */
   function wydarzeniaMeczu(mid, d) {
     const st = d.statsData || [];
     if (st.length < 2 || !Array.isArray(d.legData)) return [];
@@ -335,7 +335,7 @@
     const hf = z.filter((e) => e.typ === 'hf').map((e) => e.w);
     if (hf.length) out.push('<span class="chip chf">HF ' + Math.max(...hf) + '</span>');
     const bl = z.filter((e) => e.typ === 'bl').map((e) => e.w);
-    if (bl.length) out.push('<span class="chip cbl">' + Math.min(...bl) + 'L</span>');
+    if (bl.length) out.push('<span class="chip cbl">BL ' + Math.min(...bl) + '</span>');
     return out.join('');
   }
 
@@ -494,49 +494,52 @@
     Object.entries(stan.staty).forEach(([tpid, s]) => { const b = Number(s.best); if (b >= 9 && b <= SZYBKI_LEG) bl[tpid] = b; });
     zd.filter((z) => z.typ === 'bl').forEach((z) => { bl[z.tpid] = Math.min(bl[z.tpid] || 99, z.w); });
 
-    const sekcja = (chip, tytul, obj, malejaco, format) => {
+    const sekcja = (typ, tytul, obj, malejaco, format) => {
       const wiersze = Object.entries(obj).map(([tpid, v]) => ({ tpid, v, n: nazwa(tpid, naz[tpid]) })).filter((x) => x.n)
         .sort((a, b) => (malejaco ? b.v - a.v : a.v - b.v) || a.n.localeCompare(b.n, 'pl'));
-      const max = 8;
-      const typ = chip.replace(/^c/, '');
-      const html = wiersze.slice(0, max).map((x) => {
-        const nowy = stan.nowe.has({ c180: '180', c171: '171', chf: 'hf', cbl: 'bl' }[chip] + '|' + x.tpid);
+      const html = wiersze.map((x) => {
+        const nowy = stan.nowe.has(typ + '|' + x.tpid);
         return '<div class="w-wiersz' + (nowy ? ' nowe' : '') + '"><span>' + esc(x.n) + '</span><b>' + format(x.v) + '</b></div>';
       }).join('');
-      return '<div class="w-sekcja" data-typ="' + typ + '"><h3><span>' + tytul + '</span><span class="chip ' + chip + '">' + ({ c180: '180', c171: '171', chf: 'HF', cbl: 'BL' }[chip]) + '</span></h3>' +
-        (html || '<p class="w-brak">jeszcze nikt</p>') + '</div>';
+      // sekcja z większą liczbą zawodników dostaje więcej miejsca
+      return '<div class="w-sekcja w-' + typ + '" style="flex-grow:' + Math.max(1, Math.min(wiersze.length, 8)) + '"><h3>' + tytul + '</h3>' +
+        '<div class="w-lista">' + (html ? '<div class="w-tasma">' + html + '</div>' : '<p class="w-brak">jeszcze nikt</p>') + '</div></div>';
     };
-    $('#wyroznienia').innerHTML =
-      sekcja('c180', 'Maksima', ile180, true, (v) => '×' + v) +
-      sekcja('c171', 'Rundy 171', ile171, true, (v) => '×' + v) +
-      sekcja('chf', 'High finish 100+', hf, true, (v) => v) +
-      sekcja('cbl', 'Best leg do 18', bl, false, (v) => v + ' lotek');
+    const html =
+      sekcja('180', '180', ile180, true, (v) => '×' + v) +
+      sekcja('171', '171', ile171, true, (v) => '×' + v) +
+      sekcja('hf', 'High finish 100+', hf, true, (v) => v) +
+      sekcja('bl', 'Best leg do 18', bl, false, (v) => lotka(v));
     stan.nowe.clear();
-    przytnijWyroznienia();
+    const box = $('#wyroznienia');
+    if (box.dataset.html === html) return; // nic się nie zmieniło – nie przerywamy przewijania
+    box.dataset.html = html;
+    box.innerHTML = html;
+    przewijajWyroznienia();
   }
 
-  /** Gdy wyróżnienia nie mieszczą się w panelu, ucinamy po wierszu z najdłuższej sekcji i dopisujemy „i jeszcze N”. */
-  function przytnijWyroznienia() {
-    const box = $('#wyroznienia');
-    let bezpiecznik = 60;
-    while (box.scrollHeight > box.clientHeight + 1 && bezpiecznik-- > 0) {
-      const sekcje = Array.from(box.querySelectorAll('.w-sekcja'));
-      const naj = sekcje.reduce((a, b) => (b.querySelectorAll('.w-wiersz').length > (a ? a.querySelectorAll('.w-wiersz').length : 0) ? b : a), null);
-      const wiersze = naj && naj.querySelectorAll('.w-wiersz');
-      if (!wiersze || wiersze.length <= 1) break;
-      wiersze[wiersze.length - 1].remove();
-      let wiecej = naj.querySelector('.w-wiecej');
-      if (!wiecej) { wiecej = document.createElement('p'); wiecej.className = 'w-wiecej'; wiecej.dataset.n = '0'; naj.appendChild(wiecej); }
-      wiecej.dataset.n = String(Number(wiecej.dataset.n) + 1);
-      wiecej.textContent = 'i jeszcze ' + wiecej.dataset.n + '…';
-    }
+  function lotka(n) {
+    return n + ' lotka';
+  }
+
+  /** Sekcja, w której nie mieszczą się wszyscy zawodnicy, sama przewija się powoli w górę, w kółko. */
+  function przewijajWyroznienia() {
+    $('#wyroznienia').querySelectorAll('.w-lista').forEach((lista) => {
+      const tasma = lista.querySelector('.w-tasma');
+      if (!tasma || tasma.scrollHeight <= lista.clientHeight + 2) return;
+      const wiersze = tasma.children.length;
+      const kopia = tasma.innerHTML + '<div class="w-odstep"></div>';
+      tasma.innerHTML = kopia + kopia; // dwie kopie = płynna pętla
+      tasma.classList.add('jedzie');
+      tasma.style.setProperty('--czas', Math.max(10, wiersze * 2.2) + 's');
+    });
   }
 
   /* ---------------- wyskakujące okienko ---------------- */
 
   const OPIS = {
-    '180': { duzy: '180', rodzaj: 'Maksimum!', klasa: '' },
-    '171': { duzy: '171', rodzaj: 'Runda 171', klasa: 'turkus' },
+    '180': { duzy: '180', rodzaj: 'Max!', klasa: '' },
+    '171': { duzy: '171', rodzaj: 'Runda', klasa: 'turkus' },
     hf: { rodzaj: 'High finish', klasa: '' },
     bl: { rodzaj: 'Szybki leg', klasa: 'turkus' },
   };
@@ -545,7 +548,7 @@
     const z = stan.wyskoki.shift();
     stan.wyskokTrwa = true;
     const o = OPIS[z.typ];
-    const duzy = o.duzy || (z.typ === 'bl' ? z.w + '<small style="font-size:.45em"> lotek</small>' : z.w);
+    const duzy = o.duzy || (z.typ === 'bl' ? z.w + '<small style="font-size:.45em"> lotka</small>' : z.w);
     const el = document.createElement('div');
     el.className = 'wyskok ' + o.klasa;
     el.innerHTML = '<span class="duzy">' + duzy + '</span><span class="opis"><span class="rodzaj">' + o.rodzaj + '</span>' +
