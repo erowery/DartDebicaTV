@@ -5,7 +5,6 @@
 
   const API = ['https://api.n01darts.com/api/v1', 'https://push.n01darts.com/api/v1'];
   const ODSWIEZ_MECZE_MS = 5000; // lista meczów na żywo
-  const MIN_ODSTEP_SZCZEGOLOW_MS = 4000; // szczegóły jednego meczu najczęściej co tyle
   const ODSWIEZ_TURNIEJ_MS = 60000; // nazwa turnieju i statystyki
   const ODSWIEZ_USTAWIENIA_MS = 20000; // czy admin nie zmienił turnieju
   const CZAS_STRONY_MS = 15000; // gdy mecze się nie mieszczą – zmiana strony
@@ -222,6 +221,111 @@
     return (m.statsData || []).map((s) => s.allDarts + '/' + s.winLegs + '/' + s.winSets).join('|') + '|' + m.endMatch;
   }
 
+  // Wynik rzut po rzucie: ten sam adres, z którego korzysta podgląd meczu w Nakka (match/get ma tylko skończone legi).
+  const WIDOK = 'https://lbc.n01darts.com/n01/tournament/n01_view_t.php?cmd=getViewData&sid=';
+  const CO_ILE_MECZ_MS = 3000; // każdy trwający mecz najczęściej co tyle (szybciej po sygnale z Nakka)
+
+  async function pobierzWidok(mid) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const res = await fetch(WIDOK + '&_t=' + Date.now(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify({ mid, updateTime: 0, poling: 0 }),
+        cache: 'no-store',
+        signal: ctrl.signal,
+      });
+      const j = await res.json();
+      if (!j || j.result !== 1 || !j.data || !Array.isArray(j.data.legData)) throw new Error('brak danych');
+      return j;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  /** Łączy listę meczów (nazwiska, średnie) z danymi na żywo (legi, rundy). */
+  function polacz(lista, widok) {
+    const st = (lista.statsData || []).map((s, i) => {
+      const v = (widok.data.statsData || [])[i] || {};
+      return { ...s, winLegs: v.winLegs !== undefined ? v.winLegs : s.winLegs, winSets: v.winSets !== undefined ? v.winSets : s.winSets };
+    });
+    return { ...lista, statsData: st, legData: widok.data.legData, currentLeg: widok.data.currentLeg };
+  }
+
+  /** Pobiera stan jednego meczu (rzut po rzucie); zapasowo match/get (stan po ostatnim skończonym legu). */
+  async function pobierzMecz(w) {
+    w.ostatnio = Date.now();
+    w.pilne = false;
+    let d = null;
+    try {
+      d = polacz(w.lista, await pobierzWidok(w.mid));
+    } catch (e) {
+      try {
+        const j = await pobierzJson('/match/get?mid=' + encodeURIComponent(w.mid));
+        d = j.match || j;
+        if (!d || !d.legData) d = null;
+      } catch (e2) { d = null; }
+    }
+    if (!d) return false;
+    w.szczegoly = d;
+    przyjmijZdarzenia(wydarzeniaMeczu(w.mid, d));
+    stan.doNarysowania = true;
+    return true;
+  }
+
+  // co sekundę: mecze, których dawno nie sprawdzaliśmy albo o których Nakka dała znać – najwyżej 6 naraz
+  let wTrakcie = 0;
+  function tykniecie() {
+    const teraz = Date.now();
+    const kolej = aktywne()
+      .filter((w) => !w.pobieram && (w.pilne || teraz - (w.ostatnio || 0) >= CO_ILE_MECZ_MS))
+      .sort((a, b) => (b.pilne ? 1 : 0) - (a.pilne ? 1 : 0) || (a.ostatnio || 0) - (b.ostatnio || 0));
+    for (const w of kolej) {
+      if (wTrakcie >= 6) break;
+      wTrakcie++;
+      w.pobieram = true;
+      pobierzMecz(w).finally(() => { w.pobieram = false; wTrakcie--; });
+    }
+    if (stan.doNarysowania) {
+      stan.doNarysowania = false;
+      rysujMecze();
+      rysujTasme();
+    }
+  }
+
+  /* Sygnały z Nakka (WebSocket): „w meczu X coś się zmieniło” – wtedy pobieramy go od razu. */
+  let gniazdo = null;
+  const subskrybowane = new Set();
+  function polaczSygnaly() {
+    try {
+      gniazdo = new WebSocket('wss://push.n01darts.com/push');
+    } catch (e) { gniazdo = null; return; }
+    subskrybowane.clear();
+    gniazdo.onopen = () => subskrybuj();
+    gniazdo.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg.ping) { gniazdo.send(JSON.stringify({ pong: 1 })); return; }
+      if (msg.notify) {
+        const mid = String(msg.notify).replace(/^score_/, '');
+        const w = stan.mecze.get(mid);
+        if (w) w.pilne = true;
+      }
+    };
+    gniazdo.onclose = () => { gniazdo = null; setTimeout(polaczSygnaly, 10000); };
+  }
+  function subskrybuj() {
+    if (!gniazdo || gniazdo.readyState !== 1) return;
+    aktywne().forEach((w) => {
+      if (subskrybowane.has(w.mid)) return;
+      subskrybowane.add(w.mid);
+      gniazdo.send(JSON.stringify({ push: { id: 'score_' + w.mid } }));
+    });
+  }
+  setInterval(() => { try { if (gniazdo && gniazdo.readyState === 1) gniazdo.send(JSON.stringify({ ping: 1 })); } catch (e) { /* nic */ } }, 30000);
+
+  /** Lista meczów turnieju (które trwają) – co 5 s. */
   let trwa = false;
   async function odswiezMecze() {
     if (!stan.tdid || trwa) return;
@@ -234,49 +338,36 @@
       } catch (e) {
         return; // Nakka chwilowo nie odpowiada – zostaje to, co na ekranie
       }
-      const teraz = Date.now();
       const obecne = new Set();
-      const doPobrania = [];
+      const koncowe = [];
       lista.forEach((m) => {
         const koniec = Number(m.endMatch) === 1 || m.endMatch === true;
         const stary = stan.mecze.get(m.mid);
         if (koniec) {
           // mecz właśnie się skończył – jedno ostatnie pobranie (ostatnie zamknięcie), potem znika z ekranu
-          if (stary && !stary.koniec) { stary.koniec = true; stary.lista = m; doPobrania.push(stary); }
+          if (stary && !stary.koniec) { stary.koniec = true; stary.lista = m; koncowe.push(stary); }
           return;
         }
         obecne.add(m.mid);
-        const w = stary || { mid: m.mid, podpis: '', ostatnio: 0, kolejnosc: stan.licznikKolejnosci++ };
+        const w = stary || { mid: m.mid, ostatnio: 0, kolejnosc: stan.licznikKolejnosci++ };
         w.lista = m;
         stan.mecze.set(m.mid, w);
-        const p = podpis(m);
-        if (p !== w.podpis && teraz - w.ostatnio >= MIN_ODSTEP_SZCZEGOLOW_MS) doPobrania.push(w);
       });
       // mecze, które zniknęły z listy
       stan.mecze.forEach((w, mid) => {
-        if (!obecne.has(mid) && !w.koniec) { w.koniec = true; doPobrania.push(w); }
+        if (!obecne.has(mid) && !w.koniec) { w.koniec = true; koncowe.push(w); }
       });
-
-      for (let i = 0; i < doPobrania.length; i += 4) {
-        await Promise.all(doPobrania.slice(i, i + 4).map(async (w) => {
-          w.ostatnio = Date.now();
-          try {
-            const j = await pobierzJson('/match/get?mid=' + encodeURIComponent(w.mid));
-            const d = j.match || j;
-            if (!d || !d.legData) throw new Error('brak legów');
-            w.szczegoly = d;
-            w.podpis = podpis(w.lista);
-            przyjmijZdarzenia(wydarzeniaMeczu(w.mid, d));
-          } catch (e) {
-            if (w.koniec && !obecne.has(w.mid)) w.koniec = false; // spróbujemy jeszcze raz
-          }
-        }));
+      await Promise.all(koncowe.map((w) => pobierzMecz(w)));
+      stan.mecze.forEach((w, mid) => { if (w.koniec && !obecne.has(mid)) stan.mecze.delete(mid); });
+      subskrybuj();
+      stan.doNarysowania = true;
+      // pierwsze wczytanie: wszystkie trwające mecze od razu (to, co już było, nie wyskakuje w okienkach)
+      if (stan.pierwszeSprawdzenie) {
+        const brak = aktywne().filter((w) => !w.szczegoly && !w.pobieram);
+        for (let i = 0; i < brak.length; i += 6) await Promise.all(brak.slice(i, i + 6).map((w) => pobierzMecz(w)));
+        stan.pierwszeSprawdzenie = false;
       }
-      // usuwamy zakończone
-      stan.mecze.forEach((w, mid) => { if (w.koniec && w.szczegoly !== undefined && !obecne.has(mid)) stan.mecze.delete(mid); });
-      stan.pierwszeSprawdzenie = false;
-      rysujMecze();
-      rysujTasme();
+      tykniecie();
     } finally {
       trwa = false;
     }
@@ -309,6 +400,21 @@
     const t = stan.tytulWlasny || stan.tytul || (stan.tdid ? 'Turniej' : 'Dart Dębica TV');
     $('#tytul').textContent = t;
     document.title = t + ' · na żywo';
+  }
+
+  /** Średnia z 3 lotek liczona na żywo z przebiegu wszystkich legów (łącznie z trwającym). */
+  function sredniaZLegow(d, p) {
+    const skip = pomijacPierwszy(d);
+    let pkt = 0, lotki = 0;
+    (d.legData || []).forEach((leg) => {
+      const { r, start } = rundy(leg, p, skip);
+      for (let i = 0; i < r.length; i++) {
+        const sc = Number(r[i].score);
+        if (sc < 0) { pkt += i > 0 ? Number(r[i - 1].left) : start; lotki += Math.abs(sc); break; }
+        pkt += sc; lotki += 3;
+      }
+    });
+    return lotki > 0 ? ((pkt / lotki) * 3).toFixed(2) : null;
   }
 
   function srednia(s) {
@@ -351,7 +457,7 @@
       const s = st[p] || {};
       const g = leg ? leg.gracze[p] : null;
       const moje = p === 0 ? legiA : legiB, jego = p === 0 ? legiB : legiA;
-      const sr = srednia(s);
+      const sr = (w.szczegoly && sredniaZLegow(w.szczegoly, p)) || srednia(s);
       const pod = [sr ? 'śr. ' + sr : '', g && g.ostatnio !== null ? 'ostatnio ' + g.ostatnio : ''].filter(Boolean).join(' · ');
       return '<div class="k-gracz' + (leg && leg.rzuca === p ? ' rzuca' : '') + (moje > jego ? ' prowadzi' : '') + '">' +
         '<div class="k-kto"><span class="k-nazwa">' + esc(s.name || 'Gracz ' + (p + 1)) + '</span>' +
@@ -603,6 +709,8 @@
     await sprawdzUstawienia();
     setInterval(sprawdzUstawienia, ODSWIEZ_USTAWIENIA_MS);
     setInterval(odswiezMecze, ODSWIEZ_MECZE_MS);
+    setInterval(tykniecie, 1000);
+    polaczSygnaly();
     setInterval(wczytajTurniej, ODSWIEZ_TURNIEJ_MS);
     // co sekundę zdejmujemy wygasłe podświetlenia kart
     setInterval(() => {
