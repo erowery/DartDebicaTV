@@ -685,7 +685,7 @@
     const o = OPIS[z.typ];
     const duzy = o.duzy || (z.typ === 'bl' ? z.w + '<small style="font-size:.45em"> lotka</small>' : z.w);
     const el = document.createElement('div');
-    el.className = 'wyskok ' + o.klasa;
+    el.className = 'wyskok';
     el.innerHTML = '<span class="duzy">' + duzy + '</span><span class="opis"><span class="rodzaj">' + o.rodzaj + '</span>' +
       '<span class="kto">' + esc(z.nazwa) + '</span>' + (z.rywal ? '<span class="vs">vs ' + esc(z.rywal) + '</span>' : '') + '</span>';
     const w = $('#wyskok');
