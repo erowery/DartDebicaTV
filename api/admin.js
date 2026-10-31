@@ -83,6 +83,7 @@ module.exports = async function handler(req, res) {
     tdid: tdid || null,
     link: tdid ? 'https://n01darts.com/n01/tournament/comp.php?id=' + tdid : null,
     tytul: String(body.tytul || '').slice(0, 80),
+    napis: String(body.napis || '').slice(0, 160),
     zmieniono: new Date().toISOString(),
   };
 

@@ -42,6 +42,9 @@
     try {
       const r = await fetch('/api/ustawienia?_t=' + Date.now(), { cache: 'no-store' });
       const u = await r.json();
+      if (!$('#link').value && u.link) $('#link').value = u.link;
+      if (!$('#tytul').value && u.tytul) $('#tytul').value = u.tytul;
+      if (!$('#napis').value && u.napis) $('#napis').value = u.napis;
       if (!u.tdid) { $('#teraz').textContent = 'Nic – ekran pokazuje „Brak wybranego turnieju”.'; return; }
       const n = await nazwaTurnieju(u.tdid);
       $('#teraz').innerHTML = '<b></b><br><span class="pomoc"></span>';
@@ -94,9 +97,9 @@
     else { p.innerHTML = 'Turniej: <b></b>'; p.querySelector('b').textContent = n; }
   });
 
-  async function zapisz(tdid, tytul, przycisk, el) {
+  async function zapisz(tdid, tytul, przycisk, el, napis) {
     przycisk.disabled = true;
-    const j = await api({ akcja: 'zapisz', tdid, tytul });
+    const j = await api({ akcja: 'zapisz', tdid, tytul, napis: napis || '' });
     przycisk.disabled = false;
     if (!j.ok) return komunikat(el, j.blad || 'Nie udało się zapisać.', true);
     komunikat(el, tdid ? 'Zapisane. Telewizor przełączy się w ciągu ok. 20 sekund.' : 'Wyczyszczone. Ekran zmieni się w ciągu ok. 20 sekund.');
@@ -107,7 +110,7 @@
     e.preventDefault();
     const tdid = tdidZLinku($('#link').value);
     if (!tdid) return komunikat($('#kom-zapis'), 'To nie wygląda na link do turnieju z Nakka.', true);
-    zapisz(tdid, $('#tytul').value.trim(), $('#zapisz'), $('#kom-zapis'));
+    zapisz(tdid, $('#tytul').value.trim(), $('#zapisz'), $('#kom-zapis'), $('#napis').value.trim());
   });
   $('#wyczysc').addEventListener('click', () => {
     if (!confirm('Wyczyścić ekran? Telewizor przestanie pokazywać mecze.')) return;

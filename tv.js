@@ -184,6 +184,7 @@
     if (!u) return;
     const tdid = u.tdid || null;
     stan.tytulWlasny = u.tytul || '';
+    stan.napis = u.napis || '';
     if (tdid !== stan.tdid) {
       // nowy turniej – zaczynamy od zera
       stan.tdid = tdid;
@@ -211,6 +212,7 @@
       const t = j.tournament || {};
       stan.tytul = t.title || '';
       (t.entry_list || []).forEach((e) => { if (e.tpid) stan.imiona[e.tpid] = e.name; });
+      stan.turniej = t;
     } catch (e) { /* spróbujemy za minutę */ }
     try {
       const s = await pobierzJson('/tournament/stats?tdid=' + q + '&kind=stats_list');
@@ -218,6 +220,8 @@
     } catch (e) { /* bez statystyk */ }
     rysujTytul();
     rysujWyroznienia();
+    rysujMecze();
+    rysujTasme();
   }
 
   function podpis(m) {
@@ -342,6 +346,7 @@
         const j = await pobierzJson('/match/list?tdid=' + encodeURIComponent(stan.tdid) + '&live=1', 6000);
         const od = Date.now() / 1000 - OKNO_TURNIEJU_S;
         lista = (j.list || []).filter((m) => m.mid && (!m.tmid || String(m.tmid).startsWith(stan.tdid)) && Number(m.startTime) >= od);
+        stan.lista = lista;
       } catch (e) {
         return; // Nakka chwilowo nie odpowiada – zostaje to, co na ekranie
       }
@@ -517,6 +522,17 @@
       $('#strony').hidden = true;
       return;
     }
+    const koniec = !lista.length && turniejZakonczony();
+    document.body.classList.toggle('koniec', koniec);
+    if (koniec) {
+      el.style.setProperty('--k', 1); el.style.setProperty('--w', 1);
+      $('#licznik').textContent = 'Turniej zakończony';
+      $('#strony').hidden = true;
+      const html = ekranKoncowy();
+      if (el.dataset.koniec !== html) { el.dataset.koniec = html; el.innerHTML = html; }
+      return;
+    }
+    el.dataset.koniec = '';
     if (!lista.length) {
       el.style.setProperty('--k', 1); el.style.setProperty('--w', 1);
       el.innerHTML = '<div class="pusto"><b>Za chwilę kolejne mecze</b><span>Mecze pojawią się tu same, gdy tylko zawodnicy zaczną grać w Nakka.</span></div>';
@@ -550,6 +566,91 @@
       n.title = n.textContent;
       n.textContent = czesci[0][0] + '. ' + czesci.slice(1).join(' ');
     });
+  }
+
+  /* ---------------- po turnieju ---------------- */
+
+  function turniejZakonczony() {
+    return !!stan.turniej && Number(stan.turniej.status) === 40;
+  }
+
+  const pusty = (x) => !x || x === 'empty';
+  const tablica = (x) => (Array.isArray(x) ? x : x && typeof x === 'object' ? Object.keys(x).sort((a, b) => a - b).map((k) => x[k]) : []);
+  function wynikPary(wyniki, runda, a, b) {
+    const r = tablica(wyniki)[runda];
+    const ra = r && r[a] && r[a][b], rb = r && r[b] && r[b][a];
+    return ra && rb ? [Number(ra.r), Number(rb.r)] : null;
+  }
+  function zwyciezca(wyniki, runda, a, b, nastepna) {
+    const w = wynikPary(wyniki, runda, a, b);
+    if (w && w[0] !== w[1]) return w[0] > w[1] ? a : b;
+    if (nastepna && nastepna.includes(a)) return a;
+    if (nastepna && nastepna.includes(b)) return b;
+    return null;
+  }
+
+  /** Podium z drabinki Nakka: 1., 2. i 3. miejsce (mecz o 3. miejsce albo dwóch przegranych półfinalistów). */
+  function podium() {
+    const t = stan.turniej || {};
+    const typ = ['t', 's2'].find((k) => { const tab = tablica(t[k + '_table']); return tab.length && tablica(tab[0]).some((x) => !pusty(x)); });
+    if (!typ) return null;
+    const tab = tablica(t[typ + '_table']).map(tablica);
+    const wyniki = t[typ + '_result'];
+    const out = { pierwszy: null, drugi: null, trzeci: [], final: null };
+    for (let i = 0; i < tab.length; i++) {
+      const runda = tab[i];
+      if (runda.length !== 2 && runda.length !== 4) continue;
+      for (let p = 0; p + 1 < runda.length; p += 2) {
+        const a = runda[p], b = runda[p + 1];
+        if (pusty(a) || pusty(b)) continue;
+        const w = zwyciezca(wyniki, i, a, b, tab[i + 1]);
+        if (!w) continue;
+        const l = w === a ? b : a;
+        if (runda.length === 2) {
+          out.pierwszy = w; out.drugi = l;
+          const wy = wynikPary(wyniki, i, w, l);
+          out.final = { w, l, wynik: wy };
+        } else out.trzeci.push(l);
+      }
+    }
+    const t3 = typ === 't' ? 't3' : 's2_3';
+    const tab3 = tablica(t[t3 + '_table']).map(tablica);
+    if (tab3[0] && tab3[0].length >= 2 && !pusty(tab3[0][0]) && !pusty(tab3[0][1])) {
+      const w = zwyciezca(t[t3 + '_result'], 0, tab3[0][0], tab3[0][1], tab3[1]);
+      if (w) out.trzeci = [w];
+    }
+    return out.pierwszy ? out : null;
+  }
+
+  /** Mecz finałowy z listy Nakka (do średnich). */
+  function meczFinalu(a, b) {
+    const m = (stan.lista || []).filter((x) => { const tp = (x.statsData || []).map((s) => s.tpid); return tp.includes(a) && tp.includes(b); })
+      .sort((x, y) => (Number(y.startTime) || 0) - (Number(x.startTime) || 0))[0];
+    if (!m) return null;
+    const sr = {};
+    (m.statsData || []).forEach((s) => { sr[s.tpid] = srednia(s); });
+    return sr;
+  }
+
+  function ekranKoncowy() {
+    const pd = podium();
+    const imie = (tp) => esc(stan.imiona[tp] || '');
+    if (!pd) {
+      return '<div class="pusto"><b>Turniej zakończony</b><span>Dziękujemy wszystkim zawodnikom!</span></div>';
+    }
+    const sr = pd.final ? meczFinalu(pd.final.w, pd.final.l) : null;
+    const finalHtml = pd.final && pd.final.wynik
+      ? '<div class="final"><p class="final-tytul">Finał</p><div class="final-mecz">' +
+        '<span class="fg"><b>' + imie(pd.final.w) + '</b>' + (sr && sr[pd.final.w] ? '<small>śr. ' + sr[pd.final.w] + '</small>' : '') + '</span>' +
+        '<span class="fw">' + pd.final.wynik[0] + '<i>:</i>' + pd.final.wynik[1] + '</span>' +
+        '<span class="fg"><b>' + imie(pd.final.l) + '</b>' + (sr && sr[pd.final.l] ? '<small>śr. ' + sr[pd.final.l] + '</small>' : '') + '</span></div></div>'
+      : '';
+    return '<div class="koniec-ekran">' +
+      '<div class="pd pd-1"><span class="pd-m">1</span><span class="pd-n">' + imie(pd.pierwszy) + '</span><span class="pd-o">Zwycięzca</span></div>' +
+      '<div class="pd-rzad">' +
+      '<div class="pd pd-2"><span class="pd-m">2</span><span class="pd-n">' + imie(pd.drugi) + '</span></div>' +
+      pd.trzeci.map((tp) => '<div class="pd pd-3"><span class="pd-m">3</span><span class="pd-n">' + imie(tp) + '</span></div>').join('') +
+      '</div>' + finalHtml + '</div>';
   }
 
   function odmiana(n) {
@@ -593,6 +694,19 @@
   function rysujTasme(wymus) {
     const t = $('#tasma');
     const tresc = trescTasmy();
+    if (!tresc && turniejZakonczony()) {
+      const napis = esc(stan.napis || 'Dziękujemy za udział i kibicowanie! Do zobaczenia przy tarczy 🎯');
+      const html = '<span class="t-mecz t-napis">' + napis + '</span>';
+      if (t.dataset.napis !== html) {
+        t.dataset.napis = html;
+        t.dataset.ok = '';
+        t.classList.remove('stoi');
+        t.innerHTML = html + html;
+        t.style.setProperty('--czas', Math.max(20, t.scrollWidth / 2 / 90) + 's');
+      }
+      return;
+    }
+    t.dataset.napis = '';
     if (!tresc) { t.innerHTML = '<span class="t-mecz"><small>Brak trwających meczów</small></span>'; t.classList.add('stoi'); return; }
     // przy działającej animacji treść podmieniamy dopiero na końcu przejazdu (bez szarpnięcia)
     if (!wymus && !t.classList.contains('stoi') && t.dataset.ok === '1') { t.dataset.czeka = '1'; return; }
