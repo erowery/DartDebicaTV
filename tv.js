@@ -1052,12 +1052,27 @@
     const bl = {};
     zd.filter((z) => z.typ === 'bl').forEach((z) => { bl[z.tpid] = Math.min(bl[z.tpid] || 99, z.w); });
 
-    const sekcja = (typ, tytul, obj, malejaco, format) => {
+    // ile razy zawodnik osiągnął każdą wartość: { tpid: { wartość: liczba } }
+    const zlicz = (typ) => {
+      const out = {};
+      zd.filter((z) => z.typ === typ).forEach((z) => {
+        const m = out[z.tpid] || (out[z.tpid] = {});
+        m[z.w] = (m[z.w] || 0) + 1;
+      });
+      return out;
+    };
+    const ileHf = zlicz('hf');
+    const ileBl = zlicz('bl');
+    // jedna linia na wartość, najlepsza na górze: „16 lotka ×2”, niżej „17 lotka”
+    const linie = (mapa, malejaco, opis) => Object.keys(mapa || {}).map(Number).sort((a, b) => (malejaco ? b - a : a - b))
+      .map((w) => '<span class="w-linia">' + opis(w) + (mapa[w] > 1 ? ' ×' + mapa[w] : '') + '</span>').join('');
+
+    const sekcja = (typ, tytul, obj, malejaco, format, ileNajlepszych) => {
       const wiersze = Object.entries(obj).map(([tpid, v]) => ({ tpid, v, n: nazwa(tpid, naz[tpid]) })).filter((x) => x.n)
-        .sort((a, b) => (malejaco ? b.v - a.v : a.v - b.v) || a.n.localeCompare(b.n, 'pl'));
+        .sort((a, b) => (malejaco ? b.v - a.v : a.v - b.v) || (ileNajlepszych ? ileNajlepszych(b) - ileNajlepszych(a) : 0) || a.n.localeCompare(b.n, 'pl'));
       const html = wiersze.map((x) => {
         const nowy = stan.nowe.has(typ + '|' + x.tpid);
-        return '<div class="w-wiersz' + (nowy ? ' nowe' : '') + '"><span class="w-nazwy">' + czesciNazwy(x.n).map((n) => '<span class="w-nazwa">' + esc(n) + '</span>').join('') + '</span><b>' + format(x.v) + '</b></div>';
+        return '<div class="w-wiersz' + (nowy ? ' nowe' : '') + '"><span class="w-nazwy">' + czesciNazwy(x.n).map((n) => '<span class="w-nazwa">' + esc(n) + '</span>').join('') + '</span><b>' + format(x.v, x.tpid) + '</b></div>';
       }).join('');
       // sekcja z większą liczbą zawodników dostaje więcej miejsca
       return '<div class="w-sekcja w-' + typ + '" style="flex-grow:' + Math.max(1, Math.min(wiersze.length, 8)) + '"><h3>' + tytul + '</h3>' +
@@ -1066,8 +1081,8 @@
     const html =
       sekcja('180', '180', ile180, true, (v) => '×' + v) +
       sekcja('171', '171', ile171, true, (v) => '×' + v) +
-      sekcja('hf', 'High finish 100+', hf, true, (v) => v) +
-      sekcja('bl', 'Best leg do 18', bl, false, (v) => lotka(v));
+      sekcja('hf', 'High finish 100+', hf, true, (v, tpid) => linie(ileHf[tpid], true, (w) => w), (x) => ileHf[x.tpid][x.v]) +
+      sekcja('bl', 'Best leg do 18', bl, false, (v, tpid) => linie(ileBl[tpid], false, lotka), (x) => ileBl[x.tpid][x.v]);
     stan.nowe.clear();
     const box = $('#wyroznienia');
     if (box.dataset.html === html) return; // nic się nie zmieniło – nie przerywamy przewijania
