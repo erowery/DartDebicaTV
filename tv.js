@@ -312,6 +312,14 @@
   async function pobierzMecz(w) {
     w.ostatnio = Date.now();
     w.pilne = false;
+    if (w.limitSet === undefined) {
+      w.limitSet = 0;
+      pobierzJson('/match/get?mid=' + encodeURIComponent(w.mid)).then((j) => {
+        const d = j.match || j;
+        w.limitSet = Number(d && d.limitSet) || 0;
+        if (w.limitSet) stan.doNarysowania = true;
+      }).catch(() => { w.limitSet = undefined; });
+    }
     let d = null;
     try {
       const v = await pobierzWidok(w.mid);
@@ -514,29 +522,40 @@
     return out.join('');
   }
 
+  /** Czy mecz jest grany na sety (ustawienie meczu w Nakka albo wygrany już jakiś set). */
+  function naSety(w, st) {
+    return Number(w.limitSet) > 0 || st.some((s) => Number(s.winSets) > 0);
+  }
+
   function kartaHtml(w) {
     const m = w.lista;
     const d = w.szczegoly || m;
     const st = (d.statsData && d.statsData.length >= 2 ? d.statsData : m.statsData) || [];
     const leg = w.szczegoly ? stanLega(w.szczegoly) : null;
-    const sety = st.some((s) => Number(s.winSets) > 0);
+    const sety = naSety(w, st);
     const legiA = Number(st[0] && st[0].winLegs) || 0, legiB = Number(st[1] && st[1].winLegs) || 0;
+    const setyA = Number(st[0] && st[0].winSets) || 0, setyB = Number(st[1] && st[1].winSets) || 0;
     const akcja = (stan.akcje.get(w.mid) || 0) > Date.now();
     const gracz = (p) => {
       const s = st[p] || {};
       const g = leg ? leg.gracze[p] : null;
       const moje = p === 0 ? legiA : legiB, jego = p === 0 ? legiB : legiA;
+      const mojeS = p === 0 ? setyA : setyB, jegoS = p === 0 ? setyB : setyA;
       const sr = (w.szczegoly && sredniaZLegow(w.szczegoly, p)) || srednia(s);
       const pod = [sr ? 'śr. ' + sr : '', g && g.ostatnio !== null ? 'ostatnio ' + g.ostatnio : ''].filter(Boolean).join(' · ');
+      const wynik = sety
+        ? '<span class="k-box k-set' + (mojeS > jegoS ? ' prow' : '') + '"><small>Sety</small>' + mojeS + '</span>' +
+          '<span class="k-box' + (moje > jego ? ' prow' : '') + '"><small>Legi</small>' + moje + '</span>'
+        : '<span class="k-legi">' + moje + '</span>';
       return '<div class="k-gracz' + (leg && leg.rzuca === p ? ' rzuca' : '') + (moje > jego ? ' prowadzi' : '') + '">' +
         '<div class="k-kto"><span class="k-nazwa">' + esc(s.name || 'Gracz ' + (p + 1)) + '</span>' +
         '<span class="k-pod"><span>' + esc(pod) + '</span>' + chipy(w.mid, s.tpid) + '</span></div>' +
-        '<span class="k-zostalo">' + (g ? g.zostalo : '') + '</span>' +
-        '<span class="k-legi">' + (sety ? '<span class="k-sety">' + (Number(s.winSets) || 0) + '</span>·' : '') + moje + '</span></div>';
+        '<span class="k-zostalo">' + (g ? g.zostalo : '') + '</span>' + wynik + '</div>';
     };
     const f = faza(m);
-    return '<article class="karta' + (akcja ? ' akcja' : '') + '">' +
-      '<div class="k-gora"><span class="k-faza">' + esc(f || 'Mecz') + '</span><span>' + (leg ? 'Leg ' + leg.numer : '') + '</span></div>' +
+    const ktory = sety ? 'Set ' + (setyA + setyB + 1) + ' · Leg ' + (legiA + legiB + 1) : leg ? 'Leg ' + leg.numer : '';
+    return '<article class="karta' + (sety ? ' setowa' : '') + (akcja ? ' akcja' : '') + '">' +
+      '<div class="k-gora"><span class="k-faza">' + esc(f || 'Mecz') + '</span><span>' + ktory + '</span></div>' +
       gracz(0) + gracz(1) + '</article>';
   }
 
@@ -745,9 +764,11 @@
     const live = zywe.map((w) => {
       const st = (w.szczegoly && w.szczegoly.statsData) || w.lista.statsData || [];
       const a = st[0] || {}, b = st[1] || {};
-      const sety = st.some((s) => Number(s.winSets) > 0);
-      return '<span class="t-mecz">' + esc(a.name || '') + ' <b>' + (sety ? (a.winSets || 0) + ':' + (b.winSets || 0) + ' <small>sety</small> ' : '') +
-        (Number(a.winLegs) || 0) + ':' + (Number(b.winLegs) || 0) + '</b> ' + esc(b.name || '') + '</span>';
+      const sety = naSety(w, st);
+      const legi = (Number(a.winLegs) || 0) + ':' + (Number(b.winLegs) || 0);
+      return '<span class="t-mecz">' + esc(a.name || '') + ' ' +
+        (sety ? '<b class="t-sety">' + (Number(a.winSets) || 0) + ':' + (Number(b.winSets) || 0) + '</b><small>sety</small> <b>' + legi + '</b><small>legi</small>' : '<b>' + legi + '</b>') +
+        ' ' + esc(b.name || '') + '</span>';
     });
     // zakończone mecze turnieju (najnowsze najpierw, bez powtórek tego samego meczu)
     const widziane = new Set(zywe.map((w) => w.lista.tmid || w.mid));
@@ -765,8 +786,8 @@
         const wygrA = sety ? sa > sb : la > lb, wygrB = sety ? sb > sa : lb > la;
         const f = faza(m);
         return '<span class="t-mecz t-kon">' + (f ? '<small class="t-faza">' + esc(f) + '</small>' : '') +
-          '<span class="' + (wygrA ? 't-wygr' : 't-przegr') + '">' + esc(a.name || '') + '</span> <b>' +
-          (sety ? sa + ':' + sb : la + ':' + lb) + '</b> <span class="' + (wygrB ? 't-wygr' : 't-przegr') + '">' + esc(b.name || '') + '</span></span>';
+          '<span class="' + (wygrA ? 't-wygr' : 't-przegr') + '">' + esc(a.name || '') + '</span> ' +
+          (sety ? '<b class="t-sety">' + sa + ':' + sb + '</b><small>sety</small>' : '<b>' + la + ':' + lb + '</b>') + ' <span class="' + (wygrB ? 't-wygr' : 't-przegr') + '">' + esc(b.name || '') + '</span></span>';
       });
     if (!live.length && !koniec.length) return '';
     return (live.length ? '<span class="t-etykieta t-live"><i></i>Na żywo</span>' + live.join('') : '') +

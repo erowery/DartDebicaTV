@@ -175,3 +175,13 @@ body.koniec .w-wiersz b { font-size: 1.9rem; }
 .t-kon .t-wygr { color: var(--tekst); font-weight: 700; }
 .t-kon .t-przegr { color: var(--szary); font-weight: 500; }
 .t-mecz .t-faza { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.15rem; letter-spacing: .1em; text-transform: uppercase; color: var(--turkus); margin-right: .2rem; }
+
+/* mecze na sety: osobne pola SETY i LEGI */
+.karta.setowa .k-gracz { grid-template-columns: minmax(0, 1fr) auto auto auto; gap: calc(0.6rem * var(--s)); }
+.k-box { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: calc(3.4rem * var(--s)); padding: calc(0.15rem * var(--s)) calc(0.3rem * var(--s)) calc(0.1rem * var(--s)); border-radius: 0.5rem; background: var(--tlo); border: 1px solid var(--linia); font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: calc(2.6rem * var(--s)); line-height: 1; font-variant-numeric: tabular-nums; }
+.k-box small { font-size: calc(0.75rem * var(--s)); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--szary); margin-bottom: calc(0.15rem * var(--s)); }
+.k-box.prow { color: var(--turkus); border-color: rgba(42, 209, 201, 0.5); }
+.k-box.k-set { border-color: rgba(242, 177, 52, 0.45); color: var(--zloto); }
+.k-box.k-set.prow { background: rgba(242, 177, 52, 0.12); border-color: var(--zloto); color: var(--zloto); }
+.t-mecz .t-sety { color: var(--zloto); }
+.t-mecz small { margin: 0 .35rem 0 .15rem; text-transform: uppercase; letter-spacing: .08em; font-size: 1rem; }
