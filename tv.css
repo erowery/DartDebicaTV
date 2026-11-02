@@ -275,3 +275,17 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 .boczny { padding: 1rem; }
 .boczny h2 { font-size: 1.45rem; letter-spacing: 0.04em; white-space: nowrap; }
 .w-wiersz { gap: 0.5rem; }
+
+/* ---------- większa średnia i ostatni rzut ---------- */
+.k-pod { font-size: calc(1.22rem * var(--s)); }
+
+/* ---------- brak danych z Nakka ---------- */
+.awaria { margin-left: auto; margin-right: 1.5rem; padding: 0.55rem 1.3rem; border-radius: 0.6rem; background: #c8342b; color: #fff; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.8rem; white-space: nowrap; }
+.awaria[hidden] { display: none; }
+body.bez-danych .kropka { background: #c8342b; box-shadow: none; animation: none; }
+body.bez-danych .nadtytul { color: #ff8a80; }
+
+/* średnia i ostatni rzut w jednym wierszu, wszystkie znaczki pod nimi */
+.k-pod > span:first-child { flex: 0 0 100%; white-space: nowrap; }
+.k-pod { max-height: calc(3.4rem * var(--s)); }
+.k-debel { font-size: calc(1.72rem * var(--s)); line-height: 1; }

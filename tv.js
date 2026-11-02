@@ -406,6 +406,22 @@
   }
   setInterval(() => { try { if (gniazdo && gniazdo.readyState === 1) gniazdo.send(JSON.stringify({ ping: 1 })); } catch (e) { /* nic */ } }, 30000);
 
+  /** Pasek ostrzegawczy, gdy od 30 s nie ma nowych danych z Nakka. Znika sam po powrocie danych. */
+  const BRAK_DANYCH_MS = 30000;
+  function rysujPolaczenie() {
+    const el = $('#awaria');
+    if (!el) return;
+    const t = tryb();
+    const brak = !!stan.ostatnieDane && !['czekam', 'koniec'].includes(t) && Date.now() - stan.ostatnieDane > BRAK_DANYCH_MS;
+    el.hidden = !brak;
+    document.body.classList.toggle('bez-danych', brak);
+    if (brak) {
+      const g = new Date(stan.ostatnieDane);
+      el.textContent = 'Brak połączenia z Nakka · ostatnia aktualizacja ' + String(g.getHours()).padStart(2, '0') + ':' + String(g.getMinutes()).padStart(2, '0');
+    }
+  }
+  setInterval(rysujPolaczenie, 5000);
+
   /** Lista meczów turnieju (które trwają) – co 5 s. */
   let trwa = false;
   async function odswiezMecze() {
@@ -418,7 +434,10 @@
         const od = poczatekTurnieju();
         lista = (j.list || []).filter((m) => m.mid && (!m.tmid || String(m.tmid).startsWith(stan.tdid)) && Number(m.startTime) >= od);
         stan.lista = lista;
+        stan.ostatnieDane = Date.now();
+        rysujPolaczenie();
       } catch (e) {
+        rysujPolaczenie();
         return; // Nakka chwilowo nie odpowiada – zostaje to, co na ekranie
       }
       // zakończone mecze turnieju, których jeszcze nie przeanalizowaliśmy (np. sprzed włączenia ekranu)
@@ -521,9 +540,10 @@
     if (n <= 4) return { k: 2, w: 2, s: 1.4 };
     if (n <= 6) return { k: 3, w: 2, s: 1.15 };
     if (n <= 9) return { k: 3, w: 3, s: 1.0 };
-    return { k: 4, w: 3, s: 0.86 };
+    if (n <= 12) return { k: 4, w: 3, s: 0.86 };
+    return { k: 4, w: 4, s: 0.72 }; // do 16 meczów na jednym ekranie
   }
-  const NA_STRONIE = 12;
+  const NA_STRONIE = 16;
 
   function chipy(mid, tpid) {
     const z = stan.zdarzenia.filter((e) => e.mid === mid && e.tpid === tpid);
