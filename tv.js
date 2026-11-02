@@ -841,6 +841,9 @@
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { zablokujWygaszanie(); odswiezMecze(); } });
 
+  // podgląd w panelu admina: bez przycisku pełnego ekranu
+  if (new URLSearchParams(location.search).get('podglad')) document.body.classList.add('podglad-tryb');
+
   /* ---------------- start ---------------- */
 
   async function start() {

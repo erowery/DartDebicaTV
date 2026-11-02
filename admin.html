@@ -37,7 +37,27 @@
     .teraz { font-size: 15px; }
     .teraz b { color: var(--zloto); }
     .zapamietaj { display: flex; gap: 8px; align-items: center; font-weight: 500; font-size: 14px; color: var(--szary); }
+    .stan-gh { font-size: 14px; padding: 10px 14px; border-radius: 10px; margin-bottom: 16px; border: 1px solid var(--linia); color: var(--szary); }
+    .stan-gh.ok { border-color: rgba(42,209,201,.35); color: var(--turkus); }
+    .stan-gh.blad { border-color: rgba(255,107,107,.6); background: rgba(255,107,107,.08); color: var(--czerw); font-weight: 600; }
+    .podglad-tv { display: none; }
+    .naglowek-prawy { display: none; }
     [hidden] { display: none !important; }
+
+    /* komputer: dwie kolumny, po lewej podgląd telewizora na żywo */
+    @media (min-width: 900px) {
+      .wnetrze { max-width: 1280px; padding: 32px 32px 48px; }
+      header { margin-bottom: 28px; }
+      header img { width: 60px; height: 60px; }
+      h1 { font-size: 32px; }
+      .naglowek-prawy { display: block; margin-left: auto; }
+      #logowanie { max-width: 28rem; margin: 8vh auto 0; }
+      #panel:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+      #panel .stan-gh { grid-column: 1 / -1; margin-bottom: 0; }
+      .kolumna .karta:last-child { margin-bottom: 0; }
+      .podglad-tv { display: block; width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--linia); border-radius: 10px; background: var(--tlo); margin-top: 14px; }
+      .karta { padding: 22px; }
+    }
   </style>
 </head>
 <body>
@@ -62,40 +82,48 @@
     </section>
 
     <div id="panel" hidden>
-      <section class="karta">
-        <h2>Teraz na ekranie</h2>
-        <p class="teraz" id="teraz">Wczytuję…</p>
-        <div class="przyciski"><a class="link" href="/" target="_blank" rel="noopener">Otwórz ekran TV ↗</a></div>
-      </section>
+      <p class="stan-gh" id="stan-gh" hidden></p>
 
-      <section class="karta">
-        <h2>Zmień turniej</h2>
-        <form id="form-turniej">
-          <label for="link">Link do turnieju z Nakka</label>
-          <input type="url" id="link" placeholder="https://n01darts.com/n01/tournament/comp.php?id=t_…" autocomplete="off" required>
-          <p class="pomoc">Wystarczy skopiować adres strony turnieju z Nakka (dowolna zakładka).</p>
-          <div class="podglad" id="podglad" hidden></div>
-          <label for="tytul">Własny tytuł na ekranie (opcjonalnie)</label>
-          <input type="text" id="tytul" maxlength="80" placeholder="Pusty = nazwa turnieju z Nakka">
-          <label for="napis">Napis na pasku po zakończeniu turnieju (opcjonalnie)</label>
-          <input type="text" id="napis" maxlength="160" placeholder="np. Dziękujemy! Kolejny Puchar Prezesa 28.11">
-          <p class="pomoc">Gdy turniej się skończy, ekran sam pokaże podium, finał i wyróżnienia, a ten napis będzie się przewijał na dole.</p>
+      <div class="kolumna">
+        <section class="karta">
+          <h2>Teraz na ekranie</h2>
+          <p class="teraz" id="teraz">Wczytuję…</p>
+          <iframe class="podglad-tv" id="podglad-tv" title="Podgląd ekranu TV" loading="lazy"></iframe>
+          <div class="przyciski"><a class="link" href="/" target="_blank" rel="noopener">Otwórz ekran TV ↗</a></div>
+        </section>
+
+      </div>
+
+      <div class="kolumna">
+        <section class="karta">
+          <h2>Zmień turniej</h2>
+          <form id="form-turniej">
+            <label for="link">Link do turnieju z Nakka</label>
+            <input type="url" id="link" placeholder="https://n01darts.com/n01/tournament/comp.php?id=t_…" autocomplete="off" required>
+            <p class="pomoc">Wystarczy skopiować adres strony turnieju z Nakka (dowolna zakładka).</p>
+            <div class="podglad" id="podglad" hidden></div>
+            <label for="tytul">Własny tytuł na ekranie (opcjonalnie)</label>
+            <input type="text" id="tytul" maxlength="80" placeholder="Pusty = nazwa turnieju z Nakka">
+            <label for="napis">Napis na pasku po zakończeniu turnieju (opcjonalnie)</label>
+            <input type="text" id="napis" maxlength="160" placeholder="np. Dziękujemy! Kolejny Puchar Prezesa 28.11">
+            <p class="pomoc">Gdy turniej się skończy, ekran sam pokaże podium, finał i wyróżnienia, a ten napis będzie się przewijał na dole.</p>
+            <div class="przyciski">
+              <button class="glowny" type="submit" id="zapisz">Zapisz i pokaż na ekranie</button>
+            </div>
+            <p class="komunikat" id="kom-zapis"></p>
+          </form>
+        </section>
+
+        <section class="karta">
+          <h2>Po turnieju</h2>
+          <p class="pomoc" style="margin:0 0 4px">„Wyczyść ekran” – telewizor pokaże komunikat „Brak wybranego turnieju”.</p>
           <div class="przyciski">
-            <button class="glowny" type="submit" id="zapisz">Pokaż na ekranie</button>
+            <button class="drugi" type="button" id="wyczysc">Wyczyść ekran</button>
+            <button class="drugi" type="button" id="wyloguj">Wyloguj</button>
           </div>
-          <p class="komunikat" id="kom-zapis"></p>
-        </form>
-      </section>
-
-      <section class="karta">
-        <h2>Po turnieju</h2>
-        <p class="pomoc" style="margin:0 0 4px">Ekran pokaże komunikat „Brak wybranego turnieju”.</p>
-        <div class="przyciski">
-          <button class="drugi" type="button" id="wyczysc">Wyczyść ekran</button>
-          <button class="drugi" type="button" id="wyloguj">Wyloguj</button>
-        </div>
-        <p class="komunikat" id="kom-wyczysc"></p>
-      </section>
+          <p class="komunikat" id="kom-wyczysc"></p>
+        </section>
+      </div>
     </div>
   </div>
   <script src="admin.js"></script>

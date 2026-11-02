@@ -164,3 +164,5 @@ body.koniec .w-wiersz b { font-size: 1.9rem; }
 .final-mecz .fw { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 4.4rem; color: var(--turkus); font-variant-numeric: tabular-nums; }
 .final-mecz .fw i { font-style: normal; color: var(--szary); margin: 0 .4rem; }
 .t-napis { font-size: 1.8rem; font-weight: 700; color: var(--zloto); }
+
+.podglad-tryb .pelny { display: none; }

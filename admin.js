@@ -55,10 +55,26 @@
     }
   }
 
-  function zalogowano() {
+  function pokazStanGithuba(g) {
+    const el = $('#stan-gh');
+    if (!g) { el.hidden = true; return; }
+    el.hidden = false;
+    el.className = 'stan-gh ' + (g.ok ? 'ok' : 'blad');
+    el.textContent = (g.ok ? '✓ ' : '⚠ ') + g.opis;
+  }
+
+  function odswiezPodglad() {
+    const f = $('#podglad-tv');
+    if (getComputedStyle(f).display === 'none') return; // telefon – bez podglądu
+    f.src = '/?podglad=1&_=' + Date.now();
+  }
+
+  function zalogowano(github) {
     $('#logowanie').hidden = true;
     $('#panel').hidden = false;
+    pokazStanGithuba(github);
     pokazTeraz();
+    odswiezPodglad();
   }
   function wyloguj() {
     sesja = null;
@@ -78,7 +94,7 @@
     try { ($('#trwale').checked ? localStorage : sessionStorage).setItem(KLUCZ, sesja); } catch (e2) { /* nic */ }
     $('#haslo').value = '';
     $('#kom-log').textContent = '';
-    zalogowano();
+    zalogowano(j.github);
   });
 
   // podgląd: po wklejeniu linku od razu widać, jaki to turniej
@@ -103,7 +119,10 @@
     przycisk.disabled = false;
     if (!j.ok) return komunikat(el, j.blad || 'Nie udało się zapisać.', true);
     komunikat(el, tdid ? 'Zapisane. Telewizor przełączy się w ciągu ok. 20 sekund.' : 'Wyczyszczone. Ekran zmieni się w ciągu ok. 20 sekund.');
+    pokazStanGithuba({ ok: true, opis: 'Połączenie z GitHub działa.' });
+    if (!tdid) { $('#link').value = ''; $('#tytul').value = ''; $('#napis').value = ''; $('#podglad').hidden = true; }
     pokazTeraz();
+    setTimeout(odswiezPodglad, 1500);
   }
 
   $('#form-turniej').addEventListener('submit', (e) => {
@@ -119,6 +138,6 @@
   $('#wyloguj').addEventListener('click', wyloguj);
 
   if (sesja) {
-    api({ akcja: 'sprawdz' }).then((j) => { if (j.ok) zalogowano(); });
+    api({ akcja: 'sprawdz' }).then((j) => { if (j.ok) zalogowano(j.github); });
   }
 })();
