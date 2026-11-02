@@ -263,3 +263,9 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 
 /* ---------- wyróżnienia: wynik nie jest ucinany przez długie nazwisko ---------- */
 .w-wiersz b { flex-shrink: 0; }
+
+/* ---------- komplet wyróżnień mieści się na karcie także przy wielu meczach ---------- */
+.k-pod { column-gap: calc(0.25rem * var(--s)); }
+.chip { padding: 0 calc(0.25rem * var(--s)); }
+.k-debel { line-height: 1.02; }
+.k-debel + .k-pod { margin-top: 0; }
