@@ -542,6 +542,18 @@
     return Number(w.limitSet) > 0 || st.some((s) => Number(s.winSets) > 0);
   }
 
+  /** Debel: dwa nazwiska rozdzielone w Nakka znakiem „/”, „&” lub „+”; singiel: jedna pozycja. */
+  function czesciNazwy(nazwa) {
+    const czesci = String(nazwa).split(/\s*[\/&+]\s*/).map((x) => x.trim()).filter(Boolean);
+    return czesci.length === 2 ? czesci : [String(nazwa)];
+  }
+
+  /** Na karcie meczu każdy zawodnik debla ma osobny wiersz. */
+  function nazwyHtml(nazwa) {
+    const czesci = czesciNazwy(nazwa);
+    return czesci.map((n) => '<span class="k-nazwa' + (czesci.length === 2 ? ' k-debel' : '') + '">' + esc(n) + '</span>').join('');
+  }
+
   function kartaHtml(w) {
     const m = w.lista;
     const d = w.szczegoly || m;
@@ -563,7 +575,7 @@
           '<span class="k-box' + (moje > jego ? ' prow' : '') + '"><small>Legi</small>' + moje + '</span>'
         : '<span class="k-legi">' + moje + '</span>';
       return '<div class="k-gracz' + (leg && leg.rzuca === p ? ' rzuca' : '') + (moje > jego ? ' prowadzi' : '') + '">' +
-        '<div class="k-kto"><span class="k-nazwa">' + esc(s.name || 'Gracz ' + (p + 1)) + '</span>' +
+        '<div class="k-kto">' + nazwyHtml(s.name || 'Gracz ' + (p + 1)) +
         '<span class="k-pod"><span>' + esc(pod) + '</span>' + chipy(w.mid, s.tpid) + '</span></div>' +
         '<span class="k-zostalo">' + (g ? g.zostalo : '') + '</span>' + wynik + '</div>';
     };
@@ -1003,7 +1015,7 @@
         .sort((a, b) => (malejaco ? b.v - a.v : a.v - b.v) || a.n.localeCompare(b.n, 'pl'));
       const html = wiersze.map((x) => {
         const nowy = stan.nowe.has(typ + '|' + x.tpid);
-        return '<div class="w-wiersz' + (nowy ? ' nowe' : '') + '"><span>' + esc(x.n) + '</span><b>' + format(x.v) + '</b></div>';
+        return '<div class="w-wiersz' + (nowy ? ' nowe' : '') + '"><span class="w-nazwy">' + czesciNazwy(x.n).map((n) => '<span class="w-nazwa">' + esc(n) + '</span>').join('') + '</span><b>' + format(x.v) + '</b></div>';
       }).join('');
       // sekcja z większą liczbą zawodników dostaje więcej miejsca
       return '<div class="w-sekcja w-' + typ + '" style="flex-grow:' + Math.max(1, Math.min(wiersze.length, 8)) + '"><h3>' + tytul + '</h3>' +

@@ -244,3 +244,14 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 .zp-para span { font-size: 1.5rem; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .zp-para span.wolny { color: var(--szary); font-style: italic; font-weight: 500; }
 .zp-para em { font-style: normal; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--turkus); line-height: 1; }
+
+/* ---------- wyraźniejsze karty i deble ---------- */
+.mecze { gap: 1.4rem; }
+.karta { border: 2px solid #3f7f93; background: linear-gradient(160deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04)), #12303f; box-shadow: 0 0.5rem 1.2rem rgba(0, 0, 0, 0.55); }
+.k-gora { margin: calc(-0.8rem * var(--s)) calc(-1rem * var(--s)) 0; padding: calc(0.4rem * var(--s)) calc(1rem * var(--s)); background: rgba(42, 209, 201, 0.14); border-bottom: 1px solid #3f7f93; border-radius: 0.75rem 0.75rem 0 0; }
+.k-gora > span:last-child { color: var(--tekst); }
+/* 180 i inne wyróżnienia przechodzą pod średnią, zamiast znikać, gdy brakuje miejsca */
+.k-pod { height: auto; max-height: calc(3.1rem * var(--s)); row-gap: 0.12rem; line-height: 1.25; color: #b7cad4; }
+.k-debel { font-size: calc(1.8rem * var(--s)); line-height: 1.08; }
+.w-nazwa { display: block; }
+.w-wiersz .w-nazwy { line-height: 1.25; padding: 0.12rem 0; }
