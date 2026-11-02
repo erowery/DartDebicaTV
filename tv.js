@@ -10,7 +10,15 @@
   const CZAS_STRONY_MS = 15000; // gdy mecze się nie mieszczą – zmiana strony
   const CZAS_WYSKOKU_MS = 6500;
   const SZYBKI_LEG = 18;
-  const OKNO_TURNIEJU_S = 14 * 3600; // mecze starsze niż 14 h (np. testowe sprzed turnieju) pomijamy
+  const OKNO_TURNIEJU_S = 14 * 3600; // gdy Nakka nie podaje daty turnieju: mecze starsze niż 14 h pomijamy
+  const PRZED_DATA_S = 12 * 3600; // mecze wcześniejsze niż 12 h przed datą turnieju (np. testowe) pomijamy
+
+  /** Od kiedy liczą się mecze turnieju (sekundy). Turniej może trwać kilka dni. */
+  function poczatekTurnieju() {
+    const td = Number(stan.turniej && stan.turniej.t_date);
+    if (td > 0) return td - PRZED_DATA_S;
+    return Date.now() / 1000 - OKNO_TURNIEJU_S;
+  }
   const HIGH_FINISH = 100;
 
   const $ = (s) => document.querySelector(s);
@@ -51,6 +59,7 @@
     zdarzenia: [], // wszystkie wykryte wydarzenia
     widziane: new Set(),
     przeanalizowane: new Set(),
+    archiwum: [], // wszystkie mecze turnieju (match/list zwraca na żywo najwyżej 100 ostatnich)
     pierwszeSprawdzenie: true,
     strona: 0,
     licznikKolejnosci: 0,
@@ -195,6 +204,7 @@
       stan.zdarzenia = [];
       stan.widziane.clear();
       stan.przeanalizowane.clear();
+      stan.archiwum = [];
       stan.pierwszeSprawdzenie = true;
       stan.strona = 0;
       stan.wyskoki = [];
@@ -219,9 +229,47 @@
       stan.staty = (s && s.stats) || {};
     } catch (e) { /* bez statystyk */ }
     rysujTytul();
+    // archiwum w tle – nie opóźnia pokazania meczów na żywo
+    wczytajArchiwum().then(() => { rysujWyroznienia(); rysujTasme(); });
     rysujWyroznienia();
     rysujMecze();
     rysujTasme();
+  }
+
+  /** Wszystkie mecze turnieju od jego początku (po 100 na stronę) i ich 180/171/HF/BL do wyróżnień. */
+  let archiwumTrwa = false;
+  async function wczytajArchiwum() {
+    if (!stan.tdid || archiwumTrwa) return;
+    archiwumTrwa = true;
+    const tdid = stan.tdid;
+    try {
+      const od = Math.floor(poczatekTurnieju());
+      const doK = Math.floor(Date.now() / 1000) + 3600;
+      let wszystkie = [];
+      for (let skip = 0; skip < 2000; skip += 100) {
+        const j = await pobierzJson('/match/list?tdid=' + encodeURIComponent(tdid) + '&startTime__gte=' + od + '&startTime__lt=' + doK + '&count=100&skip=' + skip, 10000);
+        const l = (j.list || []).filter((m) => m.mid && (!m.tmid || String(m.tmid).startsWith(tdid)));
+        wszystkie = wszystkie.concat(l);
+        if ((j.list || []).length < 100) break;
+      }
+      if (tdid !== stan.tdid) return;
+      stan.archiwum = wszystkie;
+      const doAnalizy = wszystkie.filter((m) => (Number(m.endMatch) === 1 || m.endMatch === true) && !stan.przeanalizowane.has(m.mid) && !stan.mecze.has(m.mid));
+      for (let i = 0; i < doAnalizy.length; i += 10) {
+        await Promise.all(doAnalizy.slice(i, i + 10).map(async (m) => {
+          try {
+            const j = await pobierzJson('/match/get?mid=' + encodeURIComponent(m.mid));
+            const d = j.match || j;
+            if (d && d.legData && tdid === stan.tdid) { przyjmijZdarzenia(wydarzeniaMeczu(m.mid, d), true); stan.przeanalizowane.add(m.mid); }
+          } catch (e) { /* następnym razem */ }
+        }));
+        if (tdid !== stan.tdid) return;
+      }
+    } catch (e) {
+      /* Nakka nie odpowiada – spróbujemy za minutę */
+    } finally {
+      archiwumTrwa = false;
+    }
   }
 
   function podpis(m) {
@@ -344,7 +392,7 @@
       let lista;
       try {
         const j = await pobierzJson('/match/list?tdid=' + encodeURIComponent(stan.tdid) + '&live=1', 6000);
-        const od = Date.now() / 1000 - OKNO_TURNIEJU_S;
+        const od = poczatekTurnieju();
         lista = (j.list || []).filter((m) => m.mid && (!m.tmid || String(m.tmid).startsWith(stan.tdid)) && Number(m.startTime) >= od);
         stan.lista = lista;
       } catch (e) {
@@ -624,7 +672,7 @@
 
   /** Mecz finałowy z listy Nakka (do średnich). */
   function meczFinalu(a, b) {
-    const m = (stan.lista || []).filter((x) => { const tp = (x.statsData || []).map((s) => s.tpid); return tp.includes(a) && tp.includes(b); })
+    const m = wszystkieMecze().filter((x) => { const tp = (x.statsData || []).map((s) => s.tpid); return tp.includes(a) && tp.includes(b); })
       .sort((x, y) => (Number(y.startTime) || 0) - (Number(x.startTime) || 0))[0];
     if (!m) return null;
     const sr = {};
@@ -682,6 +730,14 @@
   }
 
   /** Pasek na dole: wyniki wszystkich trwających meczów, przewija się w kółko. */
+  /** Lista na żywo + archiwum, bez powtórek (ten sam mid). */
+  function wszystkieMecze() {
+    const out = new Map();
+    (stan.archiwum || []).forEach((m) => out.set(m.mid, m));
+    (stan.lista || []).forEach((m) => out.set(m.mid, m));
+    return Array.from(out.values());
+  }
+
   /** Pasek na dole: najpierw trwające mecze, a gdy jest ich mało – dopełniony wynikami ostatnio zakończonych. */
   const PASEK_MIN = 14; // tyle pozycji na pasku staramy się mieć
   function trescTasmy() {
@@ -695,7 +751,7 @@
     });
     // zakończone mecze turnieju (najnowsze najpierw, bez powtórek tego samego meczu)
     const widziane = new Set(zywe.map((w) => w.lista.tmid || w.mid));
-    const koniec = (stan.lista || [])
+    const koniec = wszystkieMecze()
       .filter((m) => Number(m.endMatch) === 1 || m.endMatch === true)
       .sort((x, y) => (Number(y.startTime) || 0) - (Number(x.startTime) || 0))
       .filter((m) => { const k = m.tmid || m.mid; if (widziane.has(k)) return false; widziane.add(k); return true; })
