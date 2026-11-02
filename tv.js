@@ -205,6 +205,10 @@
       stan.widziane.clear();
       stan.przeanalizowane.clear();
       stan.archiwum = [];
+      stan.archiwumGotowe = false;
+      stan.ostatniaAktywnosc = 0;
+      stan.koniecZauwazony = 0;
+      stan.znaniZapisani = null;
       stan.pierwszeSprawdzenie = true;
       stan.strona = 0;
       stan.wyskoki = [];
@@ -260,11 +264,18 @@
           try {
             const j = await pobierzJson('/match/get?mid=' + encodeURIComponent(m.mid));
             const d = j.match || j;
-            if (d && d.legData && tdid === stan.tdid) { przyjmijZdarzenia(wydarzeniaMeczu(m.mid, d), true); stan.przeanalizowane.add(m.mid); }
+            if (d && d.legData && tdid === stan.tdid) {
+              przyjmijZdarzenia(wydarzeniaMeczu(m.mid, d), true);
+              stan.przeanalizowane.add(m.mid);
+              let u = Number(d.updateTime) || 0;
+              if (u > 0 && u < 1e12) u *= 1000;
+              if (u > (stan.ostatniaAktywnosc || 0)) stan.ostatniaAktywnosc = u;
+            }
           } catch (e) { /* następnym razem */ }
         }));
         if (tdid !== stan.tdid) return;
       }
+      stan.archiwumGotowe = true;
     } catch (e) {
       /* Nakka nie odpowiada – spróbujemy za minutę */
     } finally {
@@ -323,7 +334,10 @@
     let d = null;
     try {
       const v = await pobierzWidok(w.mid);
-      if (Number(v.data.updateTime) > 0) w.aktualizacja = Number(v.data.updateTime);
+      if (Number(v.data.updateTime) > 0) {
+        w.aktualizacja = Number(v.data.updateTime);
+        if (w.aktualizacja > (stan.ostatniaAktywnosc || 0)) stan.ostatniaAktywnosc = w.aktualizacja;
+      }
       d = polacz(w.lista, v);
     } catch (e) {
       try {
@@ -474,7 +488,8 @@
   /* ---------------- rysowanie ---------------- */
 
   function rysujTytul() {
-    const t = stan.tytulWlasny || stan.tytul || (stan.tdid ? 'Turniej' : 'Dart Dębica TV');
+    const czekam = document.body.classList.contains('tryb-czekam');
+    const t = czekam ? 'Dart Dębica TV' : stan.tytulWlasny || stan.tytul || (stan.tdid ? 'Turniej' : 'Dart Dębica TV');
     $('#tytul').textContent = t;
     document.title = t + ' · na żywo';
   }
@@ -579,33 +594,70 @@
     return wynik.sort((a, b) => a.kolejnosc - b.kolejnosc);
   }
 
+  const KONIEC_POKAZ_MS = 10 * 60 * 1000; // plansza końcowa tyle po ostatnim meczu
+
+  /** Kiedy skończył się turniej (ostatnia aktywność w meczach), ms. */
+  function koniecCzas() {
+    let t = Number(stan.ostatniaAktywnosc) || 0;
+    wszystkieMecze().forEach((m) => { t = Math.max(t, (Number(m.startTime) || 0) * 1000); });
+    if (!stan.koniecZauwazony) stan.koniecZauwazony = Date.now();
+    return t || stan.koniecZauwazony;
+  }
+
+  /** Co pokazuje ekran: czekam / zapowiedz / mecze / przerwa / koniec */
+  function tryb() {
+    if (!stan.tdid) return 'czekam';
+    if (aktywne().length) return 'mecze';
+    if (turniejZakonczony()) {
+      if (!stan.archiwumGotowe) return 'koniec';
+      return Date.now() - koniecCzas() < KONIEC_POKAZ_MS ? 'koniec' : 'czekam';
+    }
+    if (stan.turniej && Number(stan.turniej.status) === 10) return 'zapowiedz';
+    return 'przerwa';
+  }
+
+  function ustawTryb(t) {
+    ['czekam', 'zapowiedz', 'mecze', 'przerwa', 'koniec'].forEach((x) => document.body.classList.toggle(x === 'koniec' ? 'koniec' : 'tryb-' + x, x === t));
+  }
+
+  /** Ten sam HTML nie jest wstawiany drugi raz (nie przerywamy animacji). */
+  function wstaw(el, html) {
+    if (el.dataset.widok === html) return;
+    el.dataset.widok = html;
+    el.innerHTML = html;
+  }
+
   function rysujMecze() {
     const el = $('#mecze');
     const lista = aktywne();
-    $('#licznik').textContent = lista.length ? 'Na żywo · ' + lista.length + ' ' + odmiana(lista.length) : 'Na żywo';
-    if (!stan.tdid) {
-      el.style.setProperty('--k', 1); el.style.setProperty('--w', 1);
-      el.innerHTML = '<div class="pusto"><b>Brak wybranego turnieju</b><span>Wklej link do turnieju z Nakka w panelu admina – ekran sam się przełączy.</span></div>';
-      $('#strony').hidden = true;
+    const t = tryb();
+    ustawTryb(t);
+    rysujTytul();
+    $('#strony').hidden = true;
+    if (t !== 'mecze') { el.style.setProperty('--k', 1); el.style.setProperty('--w', 1); }
+    if (t === 'czekam') {
+      $('#licznik').textContent = 'Gotowy';
+      wstaw(el, ekranOczekiwania());
       return;
     }
-    const koniec = !lista.length && turniejZakonczony();
-    document.body.classList.toggle('koniec', koniec);
-    if (koniec) {
-      el.style.setProperty('--k', 1); el.style.setProperty('--w', 1);
+    if (t === 'koniec') {
       $('#licznik').textContent = 'Turniej zakończony';
-      $('#strony').hidden = true;
-      const html = ekranKoncowy();
-      if (el.dataset.koniec !== html) { el.dataset.koniec = html; el.innerHTML = html; }
+      wstaw(el, ekranKoncowy());
       return;
     }
-    el.dataset.koniec = '';
-    if (!lista.length) {
-      el.style.setProperty('--k', 1); el.style.setProperty('--w', 1);
-      el.innerHTML = '<div class="pusto"><b>Za chwilę kolejne mecze</b><span>Mecze pojawią się tu same, gdy tylko zawodnicy zaczną grać w Nakka.</span></div>';
-      $('#strony').hidden = true;
+    if (t === 'zapowiedz') {
+      $('#licznik').textContent = 'Zapowiedź turnieju';
+      wstaw(el, ekranZapowiedzi());
+      przewijajListe(el);
+      odliczanie();
       return;
     }
+    $('#licznik').textContent = lista.length ? 'Na żywo · ' + lista.length + ' ' + odmiana(lista.length) : 'Na żywo';
+    if (t === 'przerwa') {
+      wstaw(el, '<div class="pusto"><b>Za chwilę kolejne mecze</b><span>Mecze pojawią się tu same, gdy tylko zawodnicy zaczną grać w Nakka.</span></div>');
+      return;
+    }
+    el.dataset.widok = '';
     const strony = Math.ceil(lista.length / NA_STRONIE);
     if (stan.strona >= strony) stan.strona = 0;
     // mecze dzielimy po równo między strony (np. 18 = 2 × 9), wtedy karty są większe; układ ten sam na każdej stronie
@@ -633,6 +685,106 @@
       n.title = n.textContent;
       n.textContent = czesci[0][0] + '. ' + czesci.slice(1).join(' ');
     });
+  }
+
+  /* ---------------- oczekiwanie i zapowiedź ---------------- */
+
+  /** Tarcza do darta w SVG (tło animacji): 20 pól, podwójne i potrójne, bull. */
+  function tarczaSvg() {
+    const pole = (r1, r2, a1, a2) => {
+      const p = (r, a) => (r * Math.sin(a)).toFixed(2) + ' ' + (-r * Math.cos(a)).toFixed(2);
+      return 'M' + p(r1, a1) + 'L' + p(r2, a1) + 'A' + r2 + ' ' + r2 + ' 0 0 1 ' + p(r2, a2) + 'L' + p(r1, a2) + 'A' + r1 + ' ' + r1 + ' 0 0 0 ' + p(r1, a1) + 'Z';
+    };
+    let d = '';
+    for (let i = 0; i < 20; i++) {
+      const a1 = ((i - 0.5) * Math.PI) / 10, a2 = ((i + 0.5) * Math.PI) / 10;
+      const parz = i % 2 === 0;
+      d += '<path d="' + pole(8, 95, a1, a2) + '" class="' + (parz ? 'tp-a' : 'tp-b') + '"/>';
+      d += '<path d="' + pole(57, 63, a1, a2) + '" class="' + (parz ? 'tp-z' : 'tp-t') + '"/>';
+      d += '<path d="' + pole(95, 100, a1, a2) + '" class="' + (parz ? 'tp-z' : 'tp-t') + '"/>';
+    }
+    return '<svg class="tarcza" viewBox="-104 -104 208 208" aria-hidden="true">' + d +
+      '<circle r="8" class="tp-t"/><circle r="3.5" class="tp-z"/><circle r="103" class="tp-obw"/></svg>';
+  }
+
+  function ekranOczekiwania() {
+    return '<div class="oczekiwanie">' +
+      '<div class="ocz-tarcza">' + tarczaSvg() + '<img src="img/logo-500.png" alt=""></div>' +
+      '<div class="ocz-tekst"><p class="ocz-nad">Stowarzyszenie Dart Dębica</p><h2>Czekam na turniej</h2>' +
+      '<p class="ocz-pod">Ekran włączy się sam, gdy w panelu admina zostanie wybrany turniej z Nakka.</p></div></div>';
+  }
+
+  const RZYMSKIE = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI'];
+
+  /** Data i godzina turnieju z Nakka („sobota, 28 listopada · 18:00”). */
+  function dataTurnieju() {
+    const td = Number(stan.turniej && stan.turniej.t_date);
+    if (!(td > 0)) return '';
+    const d = new Date(td * 1000);
+    const dzien = d.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+    const godz = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    return dzien.charAt(0).toUpperCase() + dzien.slice(1) + (godz !== '00:00' ? ' · ' + godz : '');
+  }
+
+  /** Lista startowa albo (po losowaniu) grupy. */
+  function ekranZapowiedzi() {
+    const t = stan.turniej || {};
+    const zapisani = (t.entry_list || []).filter((e) => e && e.name);
+    // nowe nazwiska na liście – mignięcie
+    const znani = stan.znaniZapisani;
+    const nowi = new Set(znani ? zapisani.filter((e) => !znani.has(e.tpid)).map((e) => e.tpid) : []);
+    stan.znaniZapisani = new Set(zapisani.map((e) => e.tpid));
+    if (nowi.size) stan.nowiDo = Date.now() + 8000;
+    const imie = {};
+    zapisani.forEach((e) => { imie[e.tpid] = e.name; });
+    const grupy = tablica(t.rr_table).map((g) => tablica(g).filter((x) => !pusty(x) && imie[x])).filter((g) => g.length);
+    let prawa;
+    if (grupy.length) {
+      prawa = '<h3>Losowanie grup</h3><div class="zp-lista"><div class="zp-tasma zp-grupy">' + grupy.map((g, k) =>
+        '<div class="zp-grupa"><b>Grupa ' + (RZYMSKIE[k] || k + 1) + '</b>' + g.map((tp) => '<span>' + esc(imie[tp]) + '</span>').join('') + '</div>').join('') + '</div></div>';
+    } else {
+      const posort = zapisani.slice().sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+      prawa = '<h3>Lista startowa</h3>' + (posort.length
+        ? '<div class="zp-lista"><div class="zp-tasma zp-nazwiska">' + posort.map((e) => '<span class="' + (nowi.has(e.tpid) ? 'nowy' : '') + '">' + esc(e.name) + '</span>').join('') + '</div></div>'
+        : '<p class="zp-brak">Zapisy właśnie się zaczynają…</p>');
+    }
+    const n = zapisani.length;
+    const data = dataTurnieju();
+    return '<div class="zapowiedz-ekran">' +
+      '<div class="zp-lewa">' + tarczaSvg() +
+      '<p class="zp-nad">Zapowiedź turnieju</p>' +
+      '<h2>' + esc(stan.tytulWlasny || stan.tytul || 'Turniej') + '</h2>' +
+      (data ? '<p class="zp-data">' + esc(data) + '</p>' : '') +
+      '<p class="zp-odliczanie" id="odliczanie"></p>' +
+      '<div class="zp-licznik' + (nowi.size ? ' bump' : '') + '"><b>' + n + '</b><span>' + (n === 1 ? 'zawodnik' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zawodników' : 'zawodników') + '<br>na liście startowej</span></div>' +
+      '</div><div class="zp-prawa">' + prawa + '</div></div>';
+  }
+
+  /** Odliczanie do startu (osobno, żeby nie przerysowywać listy co minutę). */
+  function odliczanie() {
+    const el = document.getElementById('odliczanie');
+    if (!el) return;
+    const td = Number(stan.turniej && stan.turniej.t_date);
+    if (!(td > 0)) { el.textContent = 'Start już wkrótce'; return; }
+    const ile = td * 1000 - Date.now();
+    if (ile <= 60000) { el.textContent = 'Za chwilę start!'; return; }
+    const min = Math.round(ile / 60000);
+    const h = Math.floor(min / 60), m = min % 60;
+    el.textContent = 'Start za ' + (h ? h + ' h ' : '') + (h && !m ? '' : m + ' min');
+  }
+
+  /** Lista dłuższa niż miejsce: powolne przewijanie w górę, w kółko. */
+  function przewijajListe(el) {
+    const lista = el.querySelector('.zp-lista');
+    const tasma = lista && lista.querySelector('.zp-tasma');
+    if (!tasma || tasma.dataset.przewija) return;
+    if (tasma.scrollHeight <= lista.clientHeight + 2) return;
+    const elementy = tasma.children.length;
+    const kopia = tasma.innerHTML;
+    tasma.innerHTML = kopia + kopia;
+    tasma.dataset.przewija = '1';
+    tasma.classList.add('jedzie');
+    tasma.style.setProperty('--czas', Math.max(15, elementy * 1.6) + 's');
   }
 
   /* ---------------- po turnieju ---------------- */
@@ -795,10 +947,21 @@
   }
   function rysujTasme(wymus) {
     const t = $('#tasma');
-    const tresc = trescTasmy();
-    if (!tresc && turniejZakonczony()) {
-      const napis = esc(stan.napis || 'Dziękujemy za udział i kibicowanie! Do zobaczenia przy tarczy 🎯');
-      const html = '<span class="t-mecz t-napis">' + napis + '</span>';
+    const tr = tryb();
+    let napis = null;
+    if (tr === 'czekam') napis = 'Stowarzyszenie Dart Dębica zaprasza na turnieje i ligę · Śledź nas na facebook.com/dartdebica 🎯';
+    else if (tr === 'koniec') napis = stan.napis || 'Dziękujemy za udział i kibicowanie! Do zobaczenia przy tarczy 🎯';
+    else if (tr === 'zapowiedz') {
+      const n = ((stan.turniej && stan.turniej.entry_list) || []).filter((e) => e && e.name).length;
+      const data = dataTurnieju();
+      napis = 'Zapisy trwają · Na liście: ' + n + (data ? ' · Start: ' + data : '') + ' · Powodzenia wszystkim zawodnikom! 🎯';
+    }
+    const etykieta = { czekam: 'Info', zapowiedz: 'Zapisy', koniec: 'Dziękujemy' }[tr] || 'Wyniki';
+    const et = document.querySelector('.pasek-etykieta');
+    if (et && et.textContent !== etykieta) et.textContent = etykieta;
+    const tresc = napis === null ? trescTasmy() : '';
+    if (napis !== null) {
+      const html = '<span class="t-mecz t-napis">' + esc(napis) + '</span>';
       if (t.dataset.napis !== html) {
         t.dataset.napis = html;
         t.dataset.ok = '';
@@ -958,6 +1121,12 @@
     setInterval(sprawdzUstawienia, ODSWIEZ_USTAWIENIA_MS);
     setInterval(odswiezMecze, ODSWIEZ_MECZE_MS);
     setInterval(tykniecie, 1000);
+    // co 15 s: przejście z planszy końcowej do oczekiwania, odliczanie, nowe zapisy przed turniejem
+    setInterval(() => {
+      if (stan.turniej && Number(stan.turniej.status) === 10) wczytajTurniej();
+      rysujMecze();
+      rysujTasme();
+    }, 15000);
     polaczSygnaly();
     setInterval(wczytajTurniej, ODSWIEZ_TURNIEJ_MS);
     // co sekundę zdejmujemy wygasłe podświetlenia kart
