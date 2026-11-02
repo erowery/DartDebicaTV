@@ -328,6 +328,7 @@
       pobierzJson('/match/get?mid=' + encodeURIComponent(w.mid)).then((j) => {
         const d = j.match || j;
         w.limitSet = Number(d && d.limitSet) || 0;
+        w.limitLeg = Number(d && d.limitLeg) || 0;
         if (w.limitSet) stan.doNarysowania = true;
       }).catch(() => { w.limitSet = undefined; });
     }
@@ -537,6 +538,47 @@
     return out.join('');
   }
 
+  /** Runda drabinki jak w ustawieniach Nakka: 1, 2… oraz -2 półfinał, -1 finał, -3 mecz o 3. miejsce. */
+  function rundaDrabinki(m, ts) {
+    const tmid = String(m.tmid || '');
+    if (/_t3_/.test(tmid)) return -3;
+    const ile = Math.ceil(Math.log2(Number(ts.t_player_count) || 2));
+    const top = String(m.title || '').match(/Top\s*(\d+)\s*$/i);
+    let i = null; // numer rundy od 0
+    if (top && Number(top[1]) >= 2) i = ile - Math.log2(Number(top[1]));
+    else {
+      const n = tmid.match(/_t_(\d+)_/);
+      if (n) i = Number(n[1]);
+    }
+    if (i === null) return null;
+    return i === ile - 1 ? -1 : i === ile - 2 ? -2 : i + 1;
+  }
+
+  /** Do ilu wygranych legów gra się w tym meczu: z meczu w Nakka, a gdy go brak – z ustawień turnieju. */
+  function legiDoWygranej(w) {
+    if (Number(w.limitLeg) > 0) return Number(w.limitLeg);
+    const t = stan.turniej;
+    const m = w.lista || {};
+    const tmid = String(m.tmid || '');
+    if (!t) return 0;
+    if (/_rr_/.test(tmid)) return Number(t.rr_setting && t.rr_setting.limit_leg_count) || 0;
+    const ts = t.t_setting;
+    if (!ts || !/_t3?_/.test(tmid)) return 0;
+    const runda = rundaDrabinki(m, ts);
+    const g = (ts.game_setting || []).find((x) => x.round === runda);
+    return Number((g && g.limit_leg_count) || ts.limit_leg_count) || 0;
+  }
+
+  /** Napis „Best of 5” (przy meczu na sety „Best of 3 sety”); pusty, gdy nie ma tej informacji. */
+  function bestOfNapis(w, sety) {
+    if (sety) {
+      const ile = Number(w.limitSet);
+      return ile > 0 ? 'Best of ' + (2 * ile - 1) + ' sety' : '';
+    }
+    const legi = legiDoWygranej(w);
+    return legi > 0 ? 'Best of ' + (2 * legi - 1) : '';
+  }
+
   /** Czy mecz jest grany na sety (ustawienie meczu w Nakka albo wygrany już jakiś set). */
   function naSety(w, st) {
     return Number(w.limitSet) > 0 || st.some((s) => Number(s.winSets) > 0);
@@ -582,7 +624,7 @@
     const f = faza(m);
     const ktory = sety ? 'Set ' + (setyA + setyB + 1) + ' · Leg ' + (legiA + legiB + 1) : leg ? 'Leg ' + leg.numer : '';
     return '<article class="karta' + (sety ? ' setowa' : '') + (akcja ? ' akcja' : '') + '">' +
-      '<div class="k-gora"><span class="k-faza">' + esc(f || 'Mecz') + '</span><span>' + ktory + '</span></div>' +
+      '<div class="k-gora"><span class="k-faza">' + esc(f || 'Mecz') + '</span><span class="k-format">' + [bestOfNapis(w, sety), ktory].filter(Boolean).join(' · ') + '</span></div>' +
       gracz(0) + gracz(1) + '</article>';
   }
 

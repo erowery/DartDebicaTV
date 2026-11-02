@@ -255,3 +255,9 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 .k-debel { font-size: calc(1.8rem * var(--s)); line-height: 1.08; }
 .w-nazwa { display: block; }
 .w-wiersz .w-nazwy { line-height: 1.25; padding: 0.12rem 0; }
+
+/* ---------- ciemniejsze karty ---------- */
+.karta { background: linear-gradient(160deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)), #091821; }
+.k-gora { background: rgba(42, 209, 201, 0.08); }
+.k-format { flex-shrink: 0; }
+
