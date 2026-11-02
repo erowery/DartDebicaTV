@@ -612,7 +612,8 @@
       if (!stan.archiwumGotowe) return 'koniec';
       return Date.now() - koniecCzas() < KONIEC_POKAZ_MS ? 'koniec' : 'czekam';
     }
-    if (stan.turniej && Number(stan.turniej.status) === 10) return 'zapowiedz';
+    // dopóki w turnieju nie rozpoczął się żaden mecz – lista zawodników
+    if (stan.turniej && !wszystkieMecze().length) return 'zapowiedz';
     return 'przerwa';
   }
 
@@ -714,8 +715,6 @@
       '<p class="ocz-pod">Ekran włączy się sam, gdy w panelu admina zostanie wybrany turniej z Nakka.</p></div></div>';
   }
 
-  const RZYMSKIE = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI'];
-
   /** Data i godzina turnieju z Nakka („sobota, 28 listopada · 18:00”). */
   function dataTurnieju() {
     const td = Number(stan.turniej && stan.turniej.t_date);
@@ -726,7 +725,7 @@
     return dzien.charAt(0).toUpperCase() + dzien.slice(1) + (godz !== '00:00' ? ' · ' + godz : '');
   }
 
-  /** Lista startowa albo (po losowaniu) grupy. */
+  /** Lista zawodników zapisanych do turnieju. */
   function ekranZapowiedzi() {
     const t = stan.turniej || {};
     const zapisani = (t.entry_list || []).filter((e) => e && e.name);
@@ -735,34 +734,10 @@
     const nowi = new Set(znani ? zapisani.filter((e) => !znani.has(e.tpid)).map((e) => e.tpid) : []);
     stan.znaniZapisani = new Set(zapisani.map((e) => e.tpid));
     if (nowi.size) stan.nowiDo = Date.now() + 8000;
-    const imie = {};
-    zapisani.forEach((e) => { imie[e.tpid] = e.name; });
-    const grupy = tablica(t.rr_table).map((g) => tablica(g).filter((x) => !pusty(x) && imie[x])).filter((g) => g.length);
-    // SKO (bez grup): rozlosowana drabinka – pary 1. rundy
-    const runda1 = tablica(tablica(t.t_table)[0]);
-    const pary = [];
-    if (!grupy.length && runda1.some((x) => !pusty(x) && imie[x])) {
-      for (let i = 0; i + 1 < runda1.length; i += 2) {
-        const a = !pusty(runda1[i]) && imie[runda1[i]] ? runda1[i] : null;
-        const b = !pusty(runda1[i + 1]) && imie[runda1[i + 1]] ? runda1[i + 1] : null;
-        if (a || b) pary.push([a, b]);
-      }
-    }
-    let prawa;
-    if (pary.length) {
-      const nazwaRundy = runda1.length > 2 ? 'Top ' + runda1.length : 'Finał';
-      const osoba = (tp) => (tp ? '<span>' + esc(imie[tp]) + '</span>' : '<span class="wolny">wolny los</span>');
-      prawa = '<h3>Losowanie drabinki <small>1. runda · ' + nazwaRundy + '</small></h3><div class="zp-lista"><div class="zp-tasma zp-pary">' +
-        pary.map((p, k) => '<div class="zp-para"><i>' + (k + 1) + '</i>' + osoba(p[0]) + '<em>vs</em>' + osoba(p[1]) + '</div>').join('') + '</div></div>';
-    } else if (grupy.length) {
-      prawa = '<h3>Losowanie grup</h3><div class="zp-lista"><div class="zp-tasma zp-grupy">' + grupy.map((g, k) =>
-        '<div class="zp-grupa"><b>Grupa ' + (RZYMSKIE[k] || k + 1) + '</b>' + g.map((tp) => '<span>' + esc(imie[tp]) + '</span>').join('') + '</div>').join('') + '</div></div>';
-    } else {
-      const posort = zapisani.slice().sort((a, b) => a.name.localeCompare(b.name, 'pl'));
-      prawa = '<h3>Lista startowa</h3>' + (posort.length
-        ? '<div class="zp-lista"><div class="zp-tasma zp-nazwiska">' + posort.map((e) => '<span class="' + (nowi.has(e.tpid) ? 'nowy' : '') + '">' + esc(e.name) + '</span>').join('') + '</div></div>'
-        : '<p class="zp-brak">Zapisy właśnie się zaczynają…</p>');
-    }
+    const posort = zapisani.slice().sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+    const prawa = '<h3>Lista zawodników</h3>' + (posort.length
+      ? '<div class="zp-lista"><div class="zp-tasma zp-nazwiska">' + posort.map((e) => '<span class="' + (nowi.has(e.tpid) ? 'nowy' : '') + '">' + esc(e.name) + '</span>').join('') + '</div></div>'
+      : '<p class="zp-brak">Zapisy właśnie się zaczynają…</p>');
     const n = zapisani.length;
     const data = dataTurnieju();
     return '<div class="zapowiedz-ekran">' +
@@ -1138,7 +1113,7 @@
     setInterval(tykniecie, 1000);
     // co 15 s: przejście z planszy końcowej do oczekiwania, odliczanie, nowe zapisy przed turniejem
     setInterval(() => {
-      if (stan.turniej && Number(stan.turniej.status) === 10) wczytajTurniej();
+      if (document.body.classList.contains('tryb-zapowiedz')) wczytajTurniej();
       rysujMecze();
       rysujTasme();
     }, 15000);
