@@ -261,6 +261,5 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 .k-gora { background: rgba(42, 209, 201, 0.08); }
 .k-format { flex-shrink: 0; }
 
-/* ---------- kilka wyników zawodnika w wyróżnieniach (High finish, Best leg) ---------- */
-.w-wiersz b { flex-shrink: 0; text-align: right; }
-.w-wiersz .w-linia { display: block; overflow: visible; line-height: 1.25; }
+/* ---------- wyróżnienia: wynik nie jest ucinany przez długie nazwisko ---------- */
+.w-wiersz b { flex-shrink: 0; }
