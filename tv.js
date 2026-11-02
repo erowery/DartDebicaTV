@@ -738,8 +738,23 @@
     const imie = {};
     zapisani.forEach((e) => { imie[e.tpid] = e.name; });
     const grupy = tablica(t.rr_table).map((g) => tablica(g).filter((x) => !pusty(x) && imie[x])).filter((g) => g.length);
+    // SKO (bez grup): rozlosowana drabinka – pary 1. rundy
+    const runda1 = tablica(tablica(t.t_table)[0]);
+    const pary = [];
+    if (!grupy.length && runda1.some((x) => !pusty(x) && imie[x])) {
+      for (let i = 0; i + 1 < runda1.length; i += 2) {
+        const a = !pusty(runda1[i]) && imie[runda1[i]] ? runda1[i] : null;
+        const b = !pusty(runda1[i + 1]) && imie[runda1[i + 1]] ? runda1[i + 1] : null;
+        if (a || b) pary.push([a, b]);
+      }
+    }
     let prawa;
-    if (grupy.length) {
+    if (pary.length) {
+      const nazwaRundy = runda1.length > 2 ? 'Top ' + runda1.length : 'Finał';
+      const osoba = (tp) => (tp ? '<span>' + esc(imie[tp]) + '</span>' : '<span class="wolny">wolny los</span>');
+      prawa = '<h3>Losowanie drabinki <small>1. runda · ' + nazwaRundy + '</small></h3><div class="zp-lista"><div class="zp-tasma zp-pary">' +
+        pary.map((p, k) => '<div class="zp-para"><i>' + (k + 1) + '</i>' + osoba(p[0]) + '<em>vs</em>' + osoba(p[1]) + '</div>').join('') + '</div></div>';
+    } else if (grupy.length) {
       prawa = '<h3>Losowanie grup</h3><div class="zp-lista"><div class="zp-tasma zp-grupy">' + grupy.map((g, k) =>
         '<div class="zp-grupa"><b>Grupa ' + (RZYMSKIE[k] || k + 1) + '</b>' + g.map((tp) => '<span>' + esc(imie[tp]) + '</span>').join('') + '</div>').join('') + '</div></div>';
     } else {
@@ -954,7 +969,7 @@
     else if (tr === 'zapowiedz') {
       const n = ((stan.turniej && stan.turniej.entry_list) || []).filter((e) => e && e.name).length;
       const data = dataTurnieju();
-      napis = 'Zapisy trwają · Na liście: ' + n + (data ? ' · Start: ' + data : '') + ' · Powodzenia wszystkim zawodnikom! 🎯';
+      napis = 'Zapisy trwają · Na liście: ' + n + (data ? ' · Start: ' + data.charAt(0).toLowerCase() + data.slice(1) : '') + ' · Powodzenia wszystkim zawodnikom! 🎯';
     }
     const etykieta = { czekam: 'Info', zapowiedz: 'Zapisy', koniec: 'Dziękujemy' }[tr] || 'Wyniki';
     const et = document.querySelector('.pasek-etykieta');
