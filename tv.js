@@ -682,14 +682,39 @@
   }
 
   /** Pasek na dole: wyniki wszystkich trwających meczów, przewija się w kółko. */
+  /** Pasek na dole: najpierw trwające mecze, a gdy jest ich mało – dopełniony wynikami ostatnio zakończonych. */
+  const PASEK_MIN = 14; // tyle pozycji na pasku staramy się mieć
   function trescTasmy() {
-    return aktywne().map((w) => {
+    const zywe = aktywne();
+    const live = zywe.map((w) => {
       const st = (w.szczegoly && w.szczegoly.statsData) || w.lista.statsData || [];
       const a = st[0] || {}, b = st[1] || {};
       const sety = st.some((s) => Number(s.winSets) > 0);
       return '<span class="t-mecz">' + esc(a.name || '') + ' <b>' + (sety ? (a.winSets || 0) + ':' + (b.winSets || 0) + ' <small>sety</small> ' : '') +
         (Number(a.winLegs) || 0) + ':' + (Number(b.winLegs) || 0) + '</b> ' + esc(b.name || '') + '</span>';
-    }).join('');
+    });
+    // zakończone mecze turnieju (najnowsze najpierw, bez powtórek tego samego meczu)
+    const widziane = new Set(zywe.map((w) => w.lista.tmid || w.mid));
+    const koniec = (stan.lista || [])
+      .filter((m) => Number(m.endMatch) === 1 || m.endMatch === true)
+      .sort((x, y) => (Number(y.startTime) || 0) - (Number(x.startTime) || 0))
+      .filter((m) => { const k = m.tmid || m.mid; if (widziane.has(k)) return false; widziane.add(k); return true; })
+      .slice(0, Math.max(6, PASEK_MIN - live.length))
+      .map((m) => {
+        const st = m.statsData || [];
+        const a = st[0] || {}, b = st[1] || {};
+        const la = Number(a.winLegs) || 0, lb = Number(b.winLegs) || 0;
+        const sa = Number(a.winSets) || 0, sb = Number(b.winSets) || 0;
+        const sety = sa + sb > 0;
+        const wygrA = sety ? sa > sb : la > lb, wygrB = sety ? sb > sa : lb > la;
+        const f = faza(m);
+        return '<span class="t-mecz t-kon">' + (f ? '<small class="t-faza">' + esc(f) + '</small>' : '') +
+          '<span class="' + (wygrA ? 't-wygr' : 't-przegr') + '">' + esc(a.name || '') + '</span> <b>' +
+          (sety ? sa + ':' + sb : la + ':' + lb) + '</b> <span class="' + (wygrB ? 't-wygr' : 't-przegr') + '">' + esc(b.name || '') + '</span></span>';
+      });
+    if (!live.length && !koniec.length) return '';
+    return (live.length ? '<span class="t-etykieta t-live"><i></i>Na żywo</span>' + live.join('') : '') +
+      (koniec.length ? '<span class="t-etykieta">Zakończone</span>' + koniec.join('') : '');
   }
   function rysujTasme(wymus) {
     const t = $('#tasma');

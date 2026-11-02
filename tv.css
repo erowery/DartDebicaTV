@@ -166,3 +166,12 @@ body.koniec .w-wiersz b { font-size: 1.9rem; }
 .t-napis { font-size: 1.8rem; font-weight: 700; color: var(--zloto); }
 
 .podglad-tryb .pelny { display: none; }
+
+/* pasek: etykiety sekcji i zakończone mecze */
+.t-etykieta { display: inline-flex; align-items: center; gap: .6rem; padding: 0 1.6rem 0 2.2rem; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.5rem; letter-spacing: .14em; text-transform: uppercase; color: var(--zloto); }
+.t-etykieta.t-live { color: #ff6b6b; }
+.t-etykieta.t-live i { width: .7rem; height: .7rem; border-radius: 50%; background: #e23b3b; }
+.t-kon b { color: var(--tekst); }
+.t-kon .t-wygr { color: var(--tekst); font-weight: 700; }
+.t-kon .t-przegr { color: var(--szary); font-weight: 500; }
+.t-mecz .t-faza { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.15rem; letter-spacing: .1em; text-transform: uppercase; color: var(--turkus); margin-right: .2rem; }
