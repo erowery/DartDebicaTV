@@ -269,3 +269,9 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 .chip { padding: 0 calc(0.25rem * var(--s)); }
 .k-debel { line-height: 1.02; }
 .k-debel + .k-pod { margin-top: 0; }
+
+/* ---------- węższy panel wyróżnień = więcej miejsca na mecze ---------- */
+.srodek { grid-template-columns: 1fr 18rem; }
+.boczny { padding: 1rem; }
+.boczny h2 { font-size: 1.45rem; letter-spacing: 0.04em; white-space: nowrap; }
+.w-wiersz { gap: 0.5rem; }

@@ -584,6 +584,17 @@
     return Number(w.limitSet) > 0 || st.some((s) => Number(s.winSets) > 0);
   }
 
+  // W Nakka zwykle „Nazwisko Imię”, ale zdarza się „Imię Nazwisko” – rozpoznajemy po popularnych imionach.
+  const IMIONA = new Set(('Adam Adrian Albert Aleksander Andrzej Antoni Arkadiusz Artur Bartłomiej Bartosz Błażej Bogdan Bogusław Cezary Czesław Damian Daniel Dariusz Dawid Dominik Edward Emil Eryk Ernest Fabian Filip Franciszek Gabriel Grzegorz Henryk Hubert Igor Ireneusz Jacek Jakub Jan Janusz Jarosław Jerzy Józef Julian Kacper Kamil Karol Kazimierz Konrad Krystian Krzysztof Leszek Łukasz Maciej Maksymilian Marcel Marcin Marek Mariusz Mateusz Michał Mieczysław Mikołaj Miłosz Nikodem Norbert Oliwier Oskar Patryk Paweł Piotr Przemysław Radek Radosław Rafał Robert Roman Ryszard Sebastian Stanisław Stefan Sławomir Szymon Tadeusz Tomasz Tymoteusz Wacław Waldemar Wiesław Wiktor Witold Władysław Włodzimierz Wojciech Zbigniew Zdzisław Zygmunt Agata Agnieszka Aleksandra Alicja Anna Barbara Beata Danuta Dorota Ewa Iwona Joanna Julia Justyna Karolina Katarzyna Kinga Magdalena Małgorzata Maria Marta Monika Natalia Patrycja Renata Sylwia Teresa Urszula Weronika Wiktoria Zofia').split(' '));
+
+  /** Inicjał imienia i nazwisko („S. Parkitny”), niezależnie od kolejności w Nakka. */
+  function krotkaNazwa(n) {
+    const c = String(n).trim().split(/\s+/);
+    if (c.length < 2) return c[0];
+    const imieNaPoczatku = IMIONA.has(c[0]) && !IMIONA.has(c[c.length - 1]);
+    return imieNaPoczatku ? c[0][0] + '. ' + c.slice(1).join(' ') : c[c.length - 1][0] + '. ' + c.slice(0, -1).join(' ');
+  }
+
   /** Debel: dwa nazwiska rozdzielone w Nakka znakiem „/”, „&” lub „+”; singiel: jedna pozycja. */
   function czesciNazwy(nazwa) {
     const czesci = String(nazwa).split(/\s*[\/&+]\s*/).map((x) => x.trim()).filter(Boolean);
@@ -735,10 +746,8 @@
   function skrocNazwiska(el) {
     el.querySelectorAll('.k-nazwa').forEach((n) => {
       if (n.scrollWidth <= n.clientWidth + 1) return;
-      const czesci = n.textContent.trim().split(/\s+/);
-      if (czesci.length < 2) return;
       n.title = n.textContent;
-      n.textContent = czesci[0][0] + '. ' + czesci.slice(1).join(' ');
+      n.textContent = krotkaNazwa(n.textContent);
     });
   }
 
@@ -1058,6 +1067,8 @@
       return Array.from(m.values());
     };
 
+    // pełne nazwy i „lotka” zostają na planszy końcowej, gdzie panel jest szeroki
+    const pelne = tryb() === 'koniec';
     const sekcja = (typ, tytul, dane, malejaco, format) => {
       // 180 i 171: liczba na zawodnika; High finish i Best leg: lista osiągnięć
       const wpisy = Array.isArray(dane) ? dane : Object.entries(dane).map(([tpid, v]) => ({ tpid, w: v, ile: 1 }));
@@ -1065,7 +1076,7 @@
         .sort((a, b) => (malejaco ? b.w - a.w : a.w - b.w) || b.ile - a.ile || a.n.localeCompare(b.n, 'pl'));
       const html = wiersze.map((x) => {
         const nowy = stan.nowe.has(typ + '|' + x.tpid);
-        return '<div class="w-wiersz' + (nowy ? ' nowe' : '') + '"><span class="w-nazwy">' + czesciNazwy(x.n).map((n) => '<span class="w-nazwa">' + esc(n) + '</span>').join('') + '</span><b>' + format(x.w) + (x.ile > 1 ? ' ×' + x.ile : '') + '</b></div>';
+        return '<div class="w-wiersz' + (nowy ? ' nowe' : '') + '"><span class="w-nazwy">' + czesciNazwy(x.n).map((n) => '<span class="w-nazwa">' + esc(pelne ? n : krotkaNazwa(n)) + '</span>').join('') + '</span><b>' + format(x.w) + (x.ile > 1 ? ' ×' + x.ile : '') + '</b></div>';
       }).join('');
       // sekcja z większą liczbą zawodników dostaje więcej miejsca
       return '<div class="w-sekcja w-' + typ + '" style="flex-grow:' + Math.max(1, Math.min(wiersze.length, 8)) + '"><h3>' + tytul + '</h3>' +
@@ -1075,7 +1086,7 @@
       sekcja('180', '180', ile180, true, (v) => '×' + v) +
       sekcja('171', '171', ile171, true, (v) => '×' + v) +
       sekcja('hf', 'High finish 100+', osiagniecia('hf'), true, (v) => v) +
-      sekcja('bl', 'Best leg do 18', osiagniecia('bl'), false, lotka);
+      sekcja('bl', 'Best leg do 18', osiagniecia('bl'), false, pelne ? lotka : (v) => v + ' L');
     stan.nowe.clear();
     const box = $('#wyroznienia');
     if (box.dataset.html === html) return; // nic się nie zmieniło – nie przerywamy przewijania
