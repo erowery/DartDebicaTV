@@ -207,6 +207,7 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 .ocz-tarcza .tarcza { width: 100%; height: 100%; animation: obrot 120s linear infinite, oddech 6s ease-in-out infinite; }
 .ocz-tarcza img { position: absolute; left: 50%; top: 50%; width: 12rem; height: 12rem; margin: -6rem 0 0 -6rem; border-radius: 50%; box-shadow: 0 0 0 0.5rem rgba(7, 18, 26, 0.9), 0 0 4rem rgba(42, 209, 201, 0.45); animation: oddech 6s ease-in-out infinite; }
 .ocz-tekst { max-width: 46rem; }
+.ocz-logo { display: block; width: 34rem; max-width: 100%; margin-bottom: 1.6rem; }
 .ocz-nad { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.8rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--turkus); }
 .ocz-tekst h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 7rem; line-height: 0.95; text-transform: uppercase; margin: 0.6rem 0 1.4rem; }
 .ocz-pod { font-size: 1.6rem; color: var(--szary); line-height: 1.4; }

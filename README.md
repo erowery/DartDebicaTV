@@ -1,4 +1,4 @@
-# Dart Dębica TV
+# TV Dart (tvdart.vercel.app)
 
 Ekran pod telewizor: mecze na żywo z jednego turnieju w Nakka (n01darts) z wyróżnieniem 180, 171, high finishy 100+ i legów do 18 lotek.
 

@@ -509,7 +509,7 @@
 
   function rysujTytul() {
     const czekam = document.body.classList.contains('tryb-czekam');
-    const t = czekam ? 'Dart Dębica TV' : stan.tytulWlasny || stan.tytul || (stan.tdid ? 'Turniej' : 'Dart Dębica TV');
+    const t = czekam ? 'TV Dart' : stan.tytulWlasny || stan.tytul || (stan.tdid ? 'Turniej' : 'TV Dart');
     $('#tytul').textContent = t;
     document.title = t + ' · na żywo';
   }
@@ -794,7 +794,7 @@
   function ekranOczekiwania() {
     return '<div class="oczekiwanie">' +
       '<div class="ocz-tarcza">' + tarczaSvg() + '<img src="img/logo-500.png" alt=""></div>' +
-      '<div class="ocz-tekst"><p class="ocz-nad">Stowarzyszenie Dart Dębica</p><h2>Czekam na turniej</h2>' +
+      '<div class="ocz-tekst"><img class="ocz-logo" src="img/tvdart-logo.png" alt="TV Dart – tvdart.vercel.app"><p class="ocz-nad">Stowarzyszenie Dart Dębica</p><h2>Czekam na turniej</h2>' +
       '<p class="ocz-pod">Ekran włączy się sam, gdy w panelu admina zostanie wybrany turniej z Nakka.</p></div></div>';
   }
 
