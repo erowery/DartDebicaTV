@@ -31,6 +31,8 @@ body.bez-kursora { cursor: none; }
 /* ---------- góra ---------- */
 .gora { display: flex; align-items: center; gap: 1.25rem; padding: 0 2rem; border-bottom: 1px solid var(--linia); box-shadow: inset 0 -2px 0 var(--turkus-c); }
 .logo { height: 4.5rem; width: 4.5rem; border-radius: 50%; object-fit: cover; box-shadow: 0 0 1.5rem -0.3rem rgba(42, 209, 201, 0.6); }
+.logo-tv { height: 5.6rem; width: auto; flex-shrink: 0; }
+body.tryb-czekam .logo-tv { display: none; } /* duże logo jest już na ekranie oczekiwania */
 .tytuly { flex: 1; min-width: 0; }
 .nadtytul { display: flex; align-items: center; gap: 0.6rem; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.35rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--turkus); }
 .kropka { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: #e23b3b; box-shadow: 0 0 0 0 rgba(226, 59, 59, 0.6); animation: puls 1.6s infinite; }
