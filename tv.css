@@ -294,7 +294,10 @@ body.koniec .partner { height: 18rem; }
 .boczny .pt-rola { font-size: 1.3rem; letter-spacing: 0.03em; }
 .zp-prawa .pt-rola, body.koniec .boczny .pt-rola { font-size: 1.8rem; letter-spacing: 0.1em; }
 .pt-tlo { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0.9rem; border-radius: 0.7rem; }
-.pt-tlo.jasne { background: #fff; box-shadow: 0 0 2rem -0.6rem rgba(42, 209, 201, 0.55); }
-.pt-tlo.ciemne { background: #000; border: 1px solid var(--linia); box-shadow: 0 0 2rem -0.6rem rgba(42, 209, 201, 0.55); }
+.pt-tlo.jasne { background: #eceff1; box-shadow: 0 0 2rem -0.6rem rgba(42, 209, 201, 0.55); }
+.pt-tlo.ciemne { background: #15191d; border: 1px solid var(--linia); box-shadow: 0 0 2rem -0.6rem rgba(42, 209, 201, 0.55); }
 .pt-tlo img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+/* białe lub czarne tło zapisane w pliku zlewa się z kartą */
+.pt-tlo.jasne img { mix-blend-mode: multiply; }
+.pt-tlo.ciemne img { mix-blend-mode: screen; }
 .partner.jeden .pt-tlo img { animation: puls-logo 3s ease-in-out infinite; }
