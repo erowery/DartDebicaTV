@@ -45,6 +45,7 @@
       if (!$('#link').value && u.link) $('#link').value = u.link;
       if (!$('#tytul').value && u.tytul) $('#tytul').value = u.tytul;
       if (!$('#napis').value && u.napis) $('#napis').value = u.napis;
+      rysujPartnerow(u.partnerzy);
       if (!u.tdid) { $('#teraz').textContent = 'Nic – ekran pokazuje „Brak wybranego turnieju”.'; return; }
       const n = await nazwaTurnieju(u.tdid);
       $('#teraz').innerHTML = '<b></b><br><span class="pomoc"></span>';
@@ -136,6 +137,110 @@
     zapisz(null, '', $('#wyczysc'), $('#kom-wyczysc'));
   });
   $('#wyloguj').addEventListener('click', wyloguj);
+
+  /* ---------- partnerzy wydarzenia ---------- */
+  let partnerzy = [];
+
+  function rysujPartnerow(lista) {
+    partnerzy = Array.isArray(lista) ? lista : [];
+    const box = $('#lista-partnerow');
+    box.textContent = '';
+    partnerzy.forEach((p, i) => {
+      const w = document.createElement('div');
+      w.className = 'pt-wiersz';
+      w.innerHTML = '<div class="pt-mini"><img alt=""></div><div class="pt-pola"><b></b><input type="text" maxlength="40" list="role" aria-label="Podpis nad logo" placeholder="Bez podpisu"></div>' +
+        '<div class="pt-akcje"><label><input type="checkbox"> Pokazuj na ekranie</label><button type="button" class="drugi" data-a="tlo">Tło</button><button type="button" class="drugi" data-a="gora" aria-label="W górę">↑</button><button type="button" class="drugi" data-a="dol" aria-label="W dół">↓</button><button type="button" class="drugi" data-a="usun">Usuń</button></div>';
+      const mini = w.querySelector('.pt-mini');
+      mini.classList.add(p.tlo === 'ciemne' ? 'ciemne' : 'jasne');
+      w.querySelector('img').src = '/api/logo?plik=' + encodeURIComponent(p.id);
+      w.querySelector('img').alt = p.nazwa;
+      w.querySelector('b').textContent = p.nazwa;
+      const rola = w.querySelector('.pt-pola input');
+      rola.value = p.rola || '';
+      rola.addEventListener('change', () => { p.rola = rola.value.trim(); zapiszPartnerow(); });
+      const ptaszek = w.querySelector('input[type=checkbox]');
+      ptaszek.checked = !!p.pokaz;
+      ptaszek.addEventListener('change', () => { p.pokaz = ptaszek.checked; zapiszPartnerow(); });
+      w.querySelector('[data-a=tlo]').addEventListener('click', () => { p.tlo = p.tlo === 'ciemne' ? 'jasne' : 'ciemne'; zapiszPartnerow(); });
+      const przesun = (o) => { const [x] = partnerzy.splice(i, 1); partnerzy.splice(i + o, 0, x); zapiszPartnerow(); };
+      w.querySelector('[data-a=gora]').disabled = i === 0;
+      w.querySelector('[data-a=dol]').disabled = i === partnerzy.length - 1;
+      w.querySelector('[data-a=gora]').addEventListener('click', () => przesun(-1));
+      w.querySelector('[data-a=dol]').addEventListener('click', () => przesun(1));
+      w.querySelector('[data-a=usun]').addEventListener('click', async () => {
+        if (!confirm('Usunąć „' + p.nazwa + '” razem z logo?')) return;
+        wynikPartnerow(await api({ akcja: 'partner-usun', id: p.id }), 'Usunięto.');
+      });
+      box.appendChild(w);
+    });
+  }
+
+  function wynikPartnerow(j, tekst) {
+    if (!j.ok) { komunikat($('#kom-partner'), j.blad || 'Nie udało się zapisać.', true); pokazTeraz(); return false; }
+    rysujPartnerow(j.partnerzy);
+    komunikat($('#kom-partner'), tekst + ' Telewizor zmieni się w ciągu ok. 20 sekund.');
+    setTimeout(odswiezPodglad, 1500);
+    return true;
+  }
+
+  async function zapiszPartnerow() {
+    rysujPartnerow(partnerzy);
+    wynikPartnerow(await api({ akcja: 'partnerzy', lista: partnerzy }), 'Zapisane.');
+  }
+
+  /** Zmniejsza logo w przeglądarce (max 800 × 400), zachowując przezroczystość. */
+  function przygotujLogo(plik) {
+    return new Promise((ok, zle) => {
+      const adres = URL.createObjectURL(plik);
+      const im = new Image();
+      im.onload = () => {
+        const sz = im.naturalWidth || 800, wy = im.naturalHeight || 400;
+        const skala = plik.type === 'image/svg+xml' ? Math.min(800 / sz, 400 / wy) : Math.min(1, 800 / sz, 400 / wy);
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(sz * skala));
+        c.height = Math.max(1, Math.round(wy * skala));
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(adres);
+        const webp = c.toDataURL('image/webp', 0.9);
+        ok(webp.startsWith('data:image/webp') ? webp : c.toDataURL('image/png'));
+      };
+      im.onerror = () => { URL.revokeObjectURL(adres); zle(new Error('Nie udało się odczytać tego pliku jako obrazu.')); };
+      im.src = adres;
+    });
+  }
+
+  function podgladLogo() {
+    const pole = $('#pt-podglad');
+    const f = $('#pt-plik').files[0];
+    pole.hidden = !f;
+    pole.className = 'pt-podglad ' + $('#pt-tlo').value;
+    if (f) {
+      const img = pole.querySelector('img');
+      if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+      img.src = URL.createObjectURL(f);
+      if (!$('#pt-nazwa').value) $('#pt-nazwa').value = f.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+    }
+  }
+  $('#pt-plik').addEventListener('change', podgladLogo);
+  $('#pt-tlo').addEventListener('change', podgladLogo);
+
+  $('#form-partner').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const przycisk = $('#pt-dodaj');
+    przycisk.disabled = true;
+    komunikat($('#kom-partner'), 'Wysyłam logo…');
+    try {
+      const obraz = await przygotujLogo($('#pt-plik').files[0]);
+      const j = await api({ akcja: 'partner-dodaj', obraz, nazwa: $('#pt-nazwa').value, rola: $('#pt-rola').value, tlo: $('#pt-tlo').value });
+      if (wynikPartnerow(j, 'Dodano.')) {
+        e.target.reset();
+        $('#pt-podglad').hidden = true;
+      }
+    } catch (err) {
+      komunikat($('#kom-partner'), err.message, true);
+    }
+    przycisk.disabled = false;
+  });
 
   if (sesja) {
     api({ akcja: 'sprawdz' }).then((j) => { if (j.ok) zalogowano(j.github); });

@@ -221,7 +221,7 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 @keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(1.25); } 100% { transform: scale(1); } }
 .zp-prawa { border-radius: 1rem; border: 1px solid var(--linia); background: var(--karta); padding: 1.6rem 2rem; display: flex; flex-direction: column; min-height: 0; }
 .zp-prawa h3 { flex-shrink: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 2rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--turkus); border-bottom: 1px solid var(--linia); padding-bottom: 0.4rem; margin-bottom: 0.8rem; }
-.zp-lista { flex: 1; min-height: 0; overflow: hidden; mask-image: linear-gradient(180deg, transparent, #000 4%, #000 92%, transparent); }
+.zp-lista { margin-bottom: 1.4rem; flex: 1; min-height: 0; overflow: hidden; mask-image: linear-gradient(180deg, transparent, #000 4%, #000 92%, transparent); }
 .zp-tasma.jedzie { animation: wGore var(--czas, 30s) linear infinite; }
 .zp-nazwiska { display: grid; grid-template-columns: 1fr 1fr; column-gap: 2rem; }
 .zp-nazwiska span { font-size: 1.75rem; font-weight: 600; line-height: 2.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid rgba(31, 61, 78, 0.6); }
@@ -283,3 +283,18 @@ body.bez-danych .nadtytul { color: #ff8a80; }
 .k-pod > span:first-child { flex: 0 0 100%; white-space: nowrap; }
 .k-pod { max-height: calc(3.4rem * var(--s)); }
 .k-debel { font-size: calc(1.72rem * var(--s)); line-height: 1; }
+
+/* ---------- partnerzy wydarzenia ---------- */
+.partner { position: relative; flex-shrink: 0; height: 12.5rem; margin-top: 0.8rem; }
+.zp-prawa .partner { height: 17rem; margin-top: auto; }
+body.koniec .partner { height: 18rem; }
+.pt-slajd { position: absolute; inset: 0; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.9s ease; }
+.pt-slajd.widoczny { opacity: 1; }
+.pt-rola { flex-shrink: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.45rem; line-height: 1.2; letter-spacing: 0.1em; text-transform: uppercase; color: var(--turkus); margin-bottom: 0.45rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.boczny .pt-rola { font-size: 1.3rem; letter-spacing: 0.03em; }
+.zp-prawa .pt-rola, body.koniec .boczny .pt-rola { font-size: 1.8rem; letter-spacing: 0.1em; }
+.pt-tlo { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0.9rem; border-radius: 0.7rem; }
+.pt-tlo.jasne { background: #fff; box-shadow: 0 0 2rem -0.6rem rgba(42, 209, 201, 0.55); }
+.pt-tlo.ciemne { background: #000; border: 1px solid var(--linia); box-shadow: 0 0 2rem -0.6rem rgba(42, 209, 201, 0.55); }
+.pt-tlo img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.partner.jeden .pt-tlo img { animation: puls-logo 3s ease-in-out infinite; }

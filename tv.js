@@ -194,6 +194,7 @@
     const tdid = u.tdid || null;
     stan.tytulWlasny = u.tytul || '';
     stan.napis = u.napis || '';
+    ustawPartnerow(u.partnerzy);
     if (tdid !== stan.tdid) {
       // nowy turniej – zaczynamy od zera
       stan.tdid = tdid;
@@ -714,6 +715,54 @@
   }
 
   function rysujMecze() {
+    rysujMeczeWnetrze();
+    osadzPartnerow();
+  }
+
+  /* ---------------- partnerzy wydarzenia ---------------- */
+  // Jedna karta, w której logo zawsze wypełnia całe miejsce: 1 logo stoi, kilka zmienia się co 10 s, 0 = karty nie ma.
+  const PARTNER_ZMIANA_MS = 10000;
+  const partnerzy = { klucz: '', karta: null, timer: null };
+
+  function ustawPartnerow(lista) {
+    const aktywni = (Array.isArray(lista) ? lista : []).filter((p) => p && p.pokaz && p.id);
+    const klucz = JSON.stringify(aktywni);
+    if (klucz === partnerzy.klucz) return;
+    partnerzy.klucz = klucz;
+    clearInterval(partnerzy.timer);
+    if (partnerzy.karta) partnerzy.karta.remove();
+    partnerzy.karta = null;
+    if (aktywni.length) {
+      const k = document.createElement('div');
+      k.className = 'partner' + (aktywni.length === 1 ? ' jeden' : '');
+      k.innerHTML = aktywni.map((p, i) => '<div class="pt-slajd' + (i ? '' : ' widoczny') + '">' +
+        (p.rola ? '<p class="pt-rola">' + esc(p.rola) + '</p>' : '') +
+        '<div class="pt-tlo ' + (p.tlo === 'ciemne' ? 'ciemne' : 'jasne') + '"><img src="/api/logo?plik=' + encodeURIComponent(p.id) + '" alt="' + esc(p.nazwa || '') + '"></div></div>').join('');
+      partnerzy.karta = k;
+      if (aktywni.length > 1) {
+        let nr = 0;
+        const slajdy = k.querySelectorAll('.pt-slajd');
+        partnerzy.timer = setInterval(() => {
+          slajdy[nr].classList.remove('widoczny');
+          nr = (nr + 1) % slajdy.length;
+          slajdy[nr].classList.add('widoczny');
+        }, PARTNER_ZMIANA_MS);
+      }
+    }
+    osadzPartnerow();
+  }
+
+  /** Karta trafia do panelu wyróżnień albo do listy zawodników w zapowiedzi; na ekranie oczekiwania jej nie ma. */
+  function osadzPartnerow() {
+    const k = partnerzy.karta;
+    if (!k) return;
+    const b = document.body.classList;
+    const cel = b.contains('tryb-czekam') ? null : b.contains('tryb-zapowiedz') ? document.querySelector('.zp-prawa') : $('#boczny');
+    if (!cel) { k.remove(); return; }
+    if (k.parentNode !== cel) cel.appendChild(k);
+  }
+
+  function rysujMeczeWnetrze() {
     const el = $('#mecze');
     const lista = aktywne();
     const t = tryb();

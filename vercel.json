@@ -1,10 +1,10 @@
 {
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)ustawienia.json'",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)ustawienia.json' ':(exclude)partnerzy'",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/logo).*)",
       "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
     }
   ]
