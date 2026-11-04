@@ -31,8 +31,6 @@ body.bez-kursora { cursor: none; }
 /* ---------- góra ---------- */
 .gora { display: flex; align-items: center; gap: 1.25rem; padding: 0 2rem; border-bottom: 1px solid var(--linia); box-shadow: inset 0 -2px 0 var(--turkus-c); }
 .logo { height: 4.5rem; width: 4.5rem; border-radius: 50%; object-fit: cover; box-shadow: 0 0 1.5rem -0.3rem rgba(42, 209, 201, 0.6); }
-.logo-tv { height: 5.6rem; width: auto; flex-shrink: 0; }
-body.tryb-czekam .logo-tv { display: none; } /* duże logo jest już na ekranie oczekiwania */
 .tytuly { flex: 1; min-width: 0; }
 .nadtytul { display: flex; align-items: center; gap: 0.6rem; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.35rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--turkus); }
 .kropka { width: 0.75rem; height: 0.75rem; border-radius: 50%; background: #e23b3b; box-shadow: 0 0 0 0 rgba(226, 59, 59, 0.6); animation: puls 1.6s infinite; }
@@ -194,22 +192,16 @@ body.tryb-czekam .boczny, body.tryb-zapowiedz .boczny { display: none; }
 body.tryb-czekam .kropka, body.tryb-zapowiedz .kropka { background: var(--turkus); }
 body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 
-.tarcza { display: block; }
-.tarcza .tp-a { fill: rgba(42, 209, 201, 0.16); }
-.tarcza .tp-b { fill: rgba(255, 255, 255, 0.035); }
-.tarcza .tp-t { fill: rgba(42, 209, 201, 0.55); }
-.tarcza .tp-z { fill: rgba(242, 177, 52, 0.55); }
-.tarcza .tp-obw { fill: none; stroke: rgba(42, 209, 201, 0.35); stroke-width: 0.6; }
-@keyframes obrot { to { transform: rotate(360deg); } }
-@keyframes oddech { 0%, 100% { filter: drop-shadow(0 0 1.5rem rgba(42, 209, 201, 0.25)); } 50% { filter: drop-shadow(0 0 3.5rem rgba(42, 209, 201, 0.55)); } }
+.logo-puls { position: relative; flex-shrink: 0; }
+.logo-puls img { display: block; width: 100%; position: relative; animation: puls-logo 3s ease-in-out infinite; will-change: transform; }
+.logo-puls::before { content: ''; position: absolute; inset: -12%; background: radial-gradient(closest-side, rgba(42, 209, 201, 0.32), transparent); animation: puls-blask 3s ease-in-out infinite; will-change: transform, opacity; }
+@keyframes puls-logo { 0%, 100% { transform: scale(0.97); } 50% { transform: scale(1.03); } }
+@keyframes puls-blask { 0%, 100% { opacity: 0.35; transform: scale(0.92); } 50% { opacity: 1; transform: scale(1.05); } }
 
 /* oczekiwanie na turniej */
 .oczekiwanie { grid-column: 1 / -1; grid-row: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 5rem; min-height: 0; }
-.ocz-tarcza { position: relative; width: 34rem; height: 34rem; flex-shrink: 0; }
-.ocz-tarcza .tarcza { width: 100%; height: 100%; animation: obrot 120s linear infinite, oddech 6s ease-in-out infinite; }
-.ocz-tarcza img { position: absolute; left: 50%; top: 50%; width: 12rem; height: 12rem; margin: -6rem 0 0 -6rem; border-radius: 50%; box-shadow: 0 0 0 0.5rem rgba(7, 18, 26, 0.9), 0 0 4rem rgba(42, 209, 201, 0.45); animation: oddech 6s ease-in-out infinite; }
+.ocz-puls { width: 56rem; }
 .ocz-tekst { max-width: 46rem; }
-.ocz-logo { display: block; width: 34rem; max-width: 100%; margin-bottom: 1.6rem; }
 .ocz-nad { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.8rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--turkus); }
 .ocz-tekst h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 7rem; line-height: 0.95; text-transform: uppercase; margin: 0.6rem 0 1.4rem; }
 .ocz-pod { font-size: 1.6rem; color: var(--szary); line-height: 1.4; }
@@ -217,8 +209,8 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 /* zapowiedź turnieju */
 .zapowiedz-ekran { grid-column: 1 / -1; grid-row: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 2rem; min-height: 0; }
 .zp-lewa { position: relative; overflow: hidden; border-radius: 1rem; border: 1px solid var(--linia); background: radial-gradient(70% 70% at 100% 100%, rgba(42, 209, 201, 0.12), transparent 70%), var(--karta); padding: 3rem 3rem; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
-.zp-lewa .tarcza { position: absolute; right: -11rem; bottom: -11rem; width: 36rem; height: 36rem; opacity: 0.75; animation: obrot 120s linear infinite; pointer-events: none; }
-.zp-lewa > :not(.tarcza) { position: relative; }
+.zp-lewa > :not(.zp-puls) { position: relative; }
+.zp-puls { position: absolute; right: 2.5rem; bottom: 2.5rem; width: 25rem; pointer-events: none; }
 .zp-nad { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.8rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--zloto); }
 .zp-lewa h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 5.6rem; line-height: 0.98; text-transform: uppercase; margin: 0.6rem 0 1.2rem; max-width: 95%; }
 .zp-data { font-size: 2rem; font-weight: 600; color: var(--tekst); }

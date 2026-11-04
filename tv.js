@@ -774,27 +774,15 @@
   /* ---------------- oczekiwanie i zapowiedź ---------------- */
 
   /** Tarcza do darta w SVG (tło animacji): 20 pól, podwójne i potrójne, bull. */
-  function tarczaSvg() {
-    const pole = (r1, r2, a1, a2) => {
-      const p = (r, a) => (r * Math.sin(a)).toFixed(2) + ' ' + (-r * Math.cos(a)).toFixed(2);
-      return 'M' + p(r1, a1) + 'L' + p(r2, a1) + 'A' + r2 + ' ' + r2 + ' 0 0 1 ' + p(r2, a2) + 'L' + p(r1, a2) + 'A' + r1 + ' ' + r1 + ' 0 0 0 ' + p(r1, a1) + 'Z';
-    };
-    let d = '';
-    for (let i = 0; i < 20; i++) {
-      const a1 = ((i - 0.5) * Math.PI) / 10, a2 = ((i + 0.5) * Math.PI) / 10;
-      const parz = i % 2 === 0;
-      d += '<path d="' + pole(8, 95, a1, a2) + '" class="' + (parz ? 'tp-a' : 'tp-b') + '"/>';
-      d += '<path d="' + pole(57, 63, a1, a2) + '" class="' + (parz ? 'tp-z' : 'tp-t') + '"/>';
-      d += '<path d="' + pole(95, 100, a1, a2) + '" class="' + (parz ? 'tp-z' : 'tp-t') + '"/>';
-    }
-    return '<svg class="tarcza" viewBox="-104 -104 208 208" aria-hidden="true">' + d +
-      '<circle r="8" class="tp-t"/><circle r="3.5" class="tp-z"/><circle r="103" class="tp-obw"/></svg>';
+  /** Logo TV Dart z pulsowaniem (ekran oczekiwania i zapowiedź turnieju). */
+  function logoPuls(klasa) {
+    return '<div class="logo-puls ' + klasa + '"><img src="img/tvdart-logo.png" alt="TV Dart – tvdart.vercel.app"></div>';
   }
 
   function ekranOczekiwania() {
     return '<div class="oczekiwanie">' +
-      '<div class="ocz-tarcza">' + tarczaSvg() + '<img src="img/logo-500.png" alt=""></div>' +
-      '<div class="ocz-tekst"><img class="ocz-logo" src="img/tvdart-logo.png" alt="TV Dart – tvdart.vercel.app"><p class="ocz-nad">Stowarzyszenie Dart Dębica</p><h2>Czekam na turniej</h2>' +
+      logoPuls('ocz-puls') +
+      '<div class="ocz-tekst"><p class="ocz-nad">Stowarzyszenie Dart Dębica</p><h2>Czekam na turniej</h2>' +
       '<p class="ocz-pod">Ekran włączy się sam, gdy w panelu admina zostanie wybrany turniej z Nakka.</p></div></div>';
   }
 
@@ -824,7 +812,7 @@
     const n = zapisani.length;
     const data = dataTurnieju();
     return '<div class="zapowiedz-ekran">' +
-      '<div class="zp-lewa">' + tarczaSvg() +
+      '<div class="zp-lewa">' + logoPuls('zp-puls') +
       '<p class="zp-nad">Zapowiedź turnieju</p>' +
       '<h2>' + esc(stan.tytulWlasny || stan.tytul || 'Turniej') + '</h2>' +
       (data ? '<p class="zp-data">' + esc(data) + '</p>' : '') +
