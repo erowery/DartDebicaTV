@@ -204,7 +204,6 @@ body.tryb-zapowiedz .nadtytul { color: var(--zloto); }
 .ocz-tekst { max-width: 46rem; }
 .ocz-nad { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 1.8rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--turkus); }
 .ocz-tekst h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 7rem; line-height: 0.95; text-transform: uppercase; margin: 0.6rem 0 1.4rem; }
-.ocz-pod { font-size: 1.6rem; color: var(--szary); line-height: 1.4; }
 
 /* zapowiedź turnieju */
 .zapowiedz-ekran { grid-column: 1 / -1; grid-row: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 2rem; min-height: 0; }

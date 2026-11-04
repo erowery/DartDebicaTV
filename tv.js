@@ -782,8 +782,7 @@
   function ekranOczekiwania() {
     return '<div class="oczekiwanie">' +
       logoPuls('ocz-puls') +
-      '<div class="ocz-tekst"><p class="ocz-nad">Stowarzyszenie Dart Dębica</p><h2>Czekam na turniej</h2>' +
-      '<p class="ocz-pod">Ekran włączy się sam, gdy w panelu admina zostanie wybrany turniej z Nakka.</p></div></div>';
+      '<div class="ocz-tekst"><p class="ocz-nad">Stowarzyszenie Dart Dębica</p><h2>Czekam na turniej</h2></div></div>';
   }
 
   /** Data i godzina turnieju z Nakka („sobota, 28 listopada · 18:00”). */
