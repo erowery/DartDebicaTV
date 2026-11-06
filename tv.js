@@ -1181,9 +1181,9 @@
 
   const OPIS = {
     '180': { duzy: '180', rodzaj: 'Max!', klasa: 'typ-180', czas: 10000, iskry: 28 },
-    '171': { duzy: '171', rodzaj: '', klasa: 'typ-turkus', czas: 8000, iskry: 14 },
-    hf: { rodzaj: 'High finish', klasa: 'typ-zloto', czas: 8000, iskry: 14 },
-    bl: { rodzaj: 'Szybki leg', klasa: 'typ-turkus', czas: 8000, iskry: 14 },
+    '171': { duzy: '171', rodzaj: '', klasa: 'typ-zloto', czas: 10000, iskry: 14 },
+    hf: { rodzaj: 'High finish', klasa: 'typ-zloto', czas: 10000, iskry: 14 },
+    bl: { rodzaj: 'Szybki leg', klasa: 'typ-zloto', czas: 10000, iskry: 14 },
   };
   const CZAS_WYSKOKU_KOLEJKA_MS = 6000; // gdy czeka kilka następnych, żeby kolejka nie uciekała od turnieju
 

@@ -122,7 +122,6 @@ h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 2
 .wyskok .vs { font-size: 1.4rem; color: var(--szary); }
 /* scena: przygaszenie, promienie, fale i iskry – tylko transform i opacity, żeby działało płynnie */
 .ws-scena { --akc: 242, 177, 52; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.ws-scena.typ-turkus { --akc: 42, 209, 201; }
 .ws-scena.znika { animation: ws-znika 0.4s ease-in forwards; }
 .ws-scena .wyskok { position: relative; overflow: hidden; border-color: rgb(var(--akc)); box-shadow: 0 0 4.5rem -0.3rem rgba(var(--akc), 0.8), 0 1.5rem 3rem rgba(0, 0, 0, 0.6); animation: wskok 0.65s cubic-bezier(0.2, 1.5, 0.4, 1) both; }
 .ws-scena .wyskok .duzy { color: rgb(var(--akc)); animation: ws-bicie 1.6s ease-in-out 0.65s infinite; }
