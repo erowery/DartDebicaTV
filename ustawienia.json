@@ -17,14 +17,14 @@
       "nazwa": "Klub Bilardowy Pino",
       "rola": "Partner Wydarzenia",
       "tlo": "ciemne",
-      "pokaz": false
+      "pokaz": true
     },
     {
       "id": "65d4fd36d7030cc9.webp",
       "nazwa": "Baltic Darts",
       "rola": "Partner handlowy",
       "tlo": "ciemne",
-      "pokaz": false
+      "pokaz": true
     }
   ],
   "zmieniono": "2026-11-06T14:30:41.253Z"
