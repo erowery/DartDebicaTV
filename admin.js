@@ -152,23 +152,36 @@
 
   /* ---------- partnerzy wydarzenia ---------- */
   let partnerzy = [];
+  let otwartyPartner = null;
 
   function rysujPartnerow(lista) {
     partnerzy = Array.isArray(lista) ? lista : [];
     const box = $('#lista-partnerow');
     box.textContent = '';
     if (!partnerzy.length) box.innerHTML = '<p class="pt-pusto">Nie ma jeszcze żadnego logo. Wgraj pierwsze poniżej.</p>';
+    $('#pt-liczba').textContent = partnerzy.length + ' · na ekranie ' + partnerzy.filter((p) => p.pokaz).length;
     partnerzy.forEach((p, i) => {
       const w = document.createElement('div');
       w.className = 'pt-wiersz' + (p.pokaz ? '' : ' schowany');
-      w.innerHTML = '<div class="pt-mini"><img alt=""></div><div class="pt-pola"><b></b><input type="text" maxlength="40" list="role" aria-label="Podpis nad logo" placeholder="Bez podpisu"></div>' +
-        '<div class="pt-akcje"><label><input type="checkbox"> Pokazuj na ekranie</label><button type="button" class="drugi" data-a="tlo">Tło</button><button type="button" class="drugi" data-a="gora" aria-label="W górę">↑</button><button type="button" class="drugi" data-a="dol" aria-label="W dół">↓</button><button type="button" class="drugi" data-a="usun">Usuń na stałe</button></div>';
+      w.innerHTML = '<div class="pt-glowa"><div class="pt-mini"><img alt=""></div><div class="pt-tekst"><b></b><small></small></div>' +
+        '<input type="checkbox" aria-label="Pokazuj na ekranie" title="Pokazuj na ekranie"><button type="button" class="drugi" data-a="wiecej" aria-label="Więcej opcji" aria-expanded="false">⋯</button></div>' +
+        '<div class="pt-panel" hidden><label>Podpis nad logo</label><input type="text" maxlength="40" list="role" placeholder="Bez podpisu">' +
+        '<div class="pt-akcje"><button type="button" class="drugi" data-a="tlo">Zmień tło</button><button type="button" class="drugi" data-a="gora" aria-label="W górę">↑</button><button type="button" class="drugi" data-a="dol" aria-label="W dół">↓</button><button type="button" class="drugi" data-a="usun">Usuń na stałe</button></div></div>';
       const mini = w.querySelector('.pt-mini');
       mini.classList.add(p.tlo === 'ciemne' ? 'ciemne' : 'jasne');
       w.querySelector('img').src = '/api/logo?plik=' + encodeURIComponent(p.id);
       w.querySelector('img').alt = p.nazwa;
       w.querySelector('b').textContent = p.nazwa;
-      const rola = w.querySelector('.pt-pola input');
+      w.querySelector('small').textContent = p.rola || 'bez podpisu';
+      const panel = w.querySelector('.pt-panel');
+      const wiecej = w.querySelector('[data-a=wiecej]');
+      const pokazPanel = (tak) => { panel.hidden = !tak; wiecej.setAttribute('aria-expanded', tak); };
+      pokazPanel(otwartyPartner === p.id);
+      wiecej.addEventListener('click', () => {
+        otwartyPartner = otwartyPartner === p.id ? null : p.id;
+        rysujPartnerow(partnerzy);
+      });
+      const rola = w.querySelector('.pt-panel input');
       rola.value = p.rola || '';
       rola.addEventListener('change', () => { p.rola = rola.value.trim(); zapiszPartnerow(); });
       const ptaszek = w.querySelector('input[type=checkbox]');
@@ -271,6 +284,7 @@
       if (wynikPartnerow(j, 'Dodano.')) {
         e.target.reset();
         $('#nowe-logo').open = false;
+        $('#zapisane').open = true;
         $('#pt-podglad').hidden = true;
       }
     } catch (err) {

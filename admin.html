@@ -43,22 +43,36 @@
     .stan-gh.ok { border-color: rgba(42,209,201,.35); color: var(--turkus); }
     .stan-gh.blad { border-color: rgba(255,107,107,.6); background: rgba(255,107,107,.08); color: var(--czerw); font-weight: 600; }
     select, input[type=file] { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--linia); background: var(--tlo); color: var(--tekst); font: inherit; }
-    .pt-naglowek { margin: 14px 0 0; font-size: 14px; }
+    #zapisane { margin-top: 12px; }
+    .pt-rozwin { display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; padding: 10px 14px; border: 1px solid var(--linia); border-radius: 10px; font-weight: 600; list-style: none; }
+    .pt-rozwin::-webkit-details-marker, .pt-szczegoly summary::-webkit-details-marker { display: none; }
+    .pt-rozwin b { color: var(--turkus); font-weight: 600; margin-left: 4px; }
+    .pt-strzalka { color: var(--szary); transition: transform 0.15s; }
+    details[open] > summary .pt-strzalka { transform: rotate(180deg); }
+    .pt-glowa { display: flex; align-items: center; gap: 10px; }
+    .pt-glowa .pt-mini { width: 48px; height: 36px; flex-shrink: 0; }
+    .pt-glowa .pt-tekst { flex: 1; min-width: 0; }
+    .pt-tekst b, .pt-tekst small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pt-tekst b { font-size: 14px; }
+    .pt-tekst small { color: var(--szary); font-size: 12px; }
+    .pt-glowa input[type=checkbox] { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--turkus); }
+    .pt-szczegoly summary { list-style: none; cursor: pointer; padding: 4px 8px; color: var(--szary); flex-shrink: 0; }
     .pt-pusto { padding: 10px 0; font-size: 14px; color: var(--szary); }
     #nowe-logo { margin-top: 12px; }
     #nowe-logo summary { display: block; cursor: pointer; padding: 10px 14px; border: 1px solid var(--linia); border-radius: 10px; text-align: center; font-weight: 600; list-style: none; }
     #nowe-logo summary::-webkit-details-marker { display: none; }
     .pt-wiersz.schowany .pt-mini { opacity: 0.45; }
-    .pt-wiersz { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px 12px; padding: 12px 0; border-top: 1px solid var(--linia); }
+    .pt-wiersz { padding: 8px 0; border-top: 1px solid var(--linia); }
+    .pt-wiersz:first-child { border-top: 0; }
     .pt-mini { width: 76px; height: 52px; border-radius: 6px; padding: 4px; display: flex; align-items: center; justify-content: center; }
     .pt-mini img, .pt-podglad img { width: 100%; height: 100%; object-fit: contain; display: block; }
     .jasne { background: #eceff1; } .ciemne { background: #15191d; border: 1px solid var(--linia); }
     .jasne img { mix-blend-mode: multiply; } .ciemne img { mix-blend-mode: screen; }
     .pt-podglad { height: 110px; margin-top: 10px; padding: 10px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-    .pt-pola b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .pt-pola input { padding: 8px 10px; margin-top: 4px; font-size: 14px; }
-    .pt-akcje { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .pt-akcje label { margin: 0 auto 0 0; display: flex; align-items: center; gap: 8px; font-weight: 500; }
+    .pt-panel { padding: 10px 0 4px; }
+    .pt-panel input[type=text] { padding: 8px 10px; font-size: 14px; }
+    .pt-panel label { margin: 0 0 4px; font-size: 13px; }
+    .pt-akcje { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
     .pt-akcje button { padding: 8px 12px; font-size: 14px; min-width: 40px; }
     #form-partner { margin-top: 8px; }
     .podglad-tv { display: none; }
@@ -145,8 +159,10 @@
         <section class="karta" id="partnerzy">
           <h2>Partnerzy wydarzenia</h2>
           <p class="pomoc" style="margin:0">Wgrane logo zostaje tu na stałe. Przed turniejem zaznacz tylko te, które mają być widoczne na ekranie.</p>
-          <h3 class="pt-naglowek">Zapisane loga</h3>
-          <div id="lista-partnerow"></div>
+          <details id="zapisane">
+            <summary class="pt-rozwin"><span>Zapisane loga <b id="pt-liczba">0</b></span><span class="pt-strzalka">▾</span></summary>
+            <div id="lista-partnerow"></div>
+          </details>
           <details id="nowe-logo">
           <summary class="drugi">+ Wgraj nowe logo</summary>
           <form id="form-partner">
