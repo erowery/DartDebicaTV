@@ -188,6 +188,15 @@
     return null;
   }
 
+  let margines = null;
+  function ustawMargines(wartosc) {
+    const m = Number.isFinite(wartosc) ? Math.min(10, Math.max(0, wartosc)) : 5;
+    if (m === margines) return;
+    margines = m;
+    document.documentElement.style.setProperty('--m', m);
+    window.dispatchEvent(new Event('resize'));
+  }
+
   async function sprawdzUstawienia() {
     const u = await wczytajUstawienia();
     if (!u) return;
@@ -195,6 +204,7 @@
     stan.tytulWlasny = u.tytul || '';
     stan.napis = u.napis || '';
     ustawPartnerow(u.partnerzy);
+    ustawMargines(u.margines);
     if (tdid !== stan.tdid) {
       // nowy turniej – zaczynamy od zera
       stan.tdid = tdid;

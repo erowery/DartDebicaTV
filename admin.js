@@ -46,6 +46,10 @@
       if (!$('#tytul').value && u.tytul) $('#tytul').value = u.tytul;
       if (!$('#napis').value && u.napis) $('#napis').value = u.napis;
       rysujPartnerow(u.partnerzy);
+      if (Number.isFinite(u.margines) && document.activeElement !== $('#margines')) {
+        $('#margines').value = u.margines;
+        $('#margines-wartosc').textContent = u.margines;
+      }
       if (!u.tdid) { $('#teraz').textContent = 'Nic – ekran pokazuje „Brak wybranego turnieju”.'; return; }
       const n = await nazwaTurnieju(u.tdid);
       $('#teraz').innerHTML = '<b></b><br><span class="pomoc"></span>';
@@ -137,6 +141,14 @@
     zapisz(null, '', $('#wyczysc'), $('#kom-wyczysc'));
   });
   $('#wyloguj').addEventListener('click', wyloguj);
+
+  $('#margines').addEventListener('input', (e) => { $('#margines-wartosc').textContent = e.target.value; });
+  $('#margines').addEventListener('change', async (e) => {
+    komunikat($('#kom-margines'), 'Zapisuję…');
+    const j = await api({ akcja: 'margines', margines: Number(e.target.value) });
+    if (j.ok) komunikat($('#kom-margines'), 'Zapisane. Telewizor zmieni się w ciągu ok. 20 sekund.');
+    else komunikat($('#kom-margines'), j.blad || 'Nie udało się zapisać.', true);
+  });
 
   /* ---------- partnerzy wydarzenia ---------- */
   let partnerzy = [];

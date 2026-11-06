@@ -188,13 +188,21 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ ok: false, blad: 'Sesja wygasła. Zaloguj się ponownie.' });
   }
   if (body.akcja === 'sprawdz') return res.status(200).json({ ok: true, github: await stanGithuba() });
-  if (!['zapisz', 'partner-dodaj', 'partnerzy', 'partner-usun'].includes(body.akcja)) return res.status(400).json({ ok: false, blad: 'Nieznana akcja.' });
+  if (!['zapisz', 'margines', 'partner-dodaj', 'partnerzy', 'partner-usun'].includes(body.akcja)) return res.status(400).json({ ok: false, blad: 'Nieznana akcja.' });
 
   if (!TOKEN()) {
     return res.status(500).json({ ok: false, blad: 'Strona nie widzi tokenu GitHub (zmienna GITHUB_TOKEN w Vercel). Sprawdź nazwę zmiennej i zrób Redeploy.' });
   }
 
   try {
+    if (body.akcja === 'margines') {
+      const { dane } = await czytajUstawienia();
+      const m = Number(body.margines);
+      if (!Number.isFinite(m)) throw bladDanych('Nieprawidłowa wartość marginesu.');
+      dane.margines = Math.min(10, Math.max(0, Math.round(m * 2) / 2));
+      await zapiszUstawienia(dane, 'Panel admina: margines ekranu ' + dane.margines + '%');
+      return res.status(200).json({ ok: true, margines: dane.margines });
+    }
     if (body.akcja === 'partner-dodaj') return res.status(200).json(await partnerDodaj(body));
     if (body.akcja === 'partnerzy') return res.status(200).json(await partnerzyZapisz(body));
     if (body.akcja === 'partner-usun') return res.status(200).json(await partnerUsun(body));
@@ -203,6 +211,7 @@ module.exports = async function handler(req, res) {
     if (tdid && !WZOR_TDID.test(tdid)) return res.status(400).json({ ok: false, blad: 'To nie wygląda na link do turnieju z Nakka.' });
     const { dane } = await czytajUstawienia();
     const ustawienia = await zapiszUstawienia({
+      ...(Number.isFinite(dane.margines) ? { margines: dane.margines } : {}),
       tdid: tdid || null,
       link: tdid ? 'https://n01darts.com/n01/tournament/comp.php?id=' + tdid : null,
       tytul: String(body.tytul || '').slice(0, 80),
