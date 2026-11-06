@@ -201,6 +201,28 @@
     wynikPartnerow(await api({ akcja: 'partnerzy', lista: partnerzy }), 'Zapisane.');
   }
 
+  /** Usuwa puste brzegi pliku (przezroczyste lub w kolorze rogu), żeby loga miały na ekranie tę samą wielkość. */
+  function obetnijMarginesy(c) {
+    const { width: sz, height: wy } = c;
+    const d = c.getContext('2d').getImageData(0, 0, sz, wy).data;
+    const [r, g, b, a] = d;
+    const tlo = (i) => (a < 16 ? d[i + 3] < 16 : d[i + 3] < 16 || (Math.abs(d[i] - r) + Math.abs(d[i + 1] - g) + Math.abs(d[i + 2] - b) < 40));
+    let x0 = sz, x1 = -1, y0 = wy, y1 = -1;
+    for (let y = 0; y < wy; y++) for (let x = 0; x < sz; x++) {
+      if (tlo((y * sz + x) * 4)) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+    if (x1 < 0) return c;
+    const n = document.createElement('canvas');
+    n.width = x1 - x0 + 1;
+    n.height = y1 - y0 + 1;
+    n.getContext('2d').drawImage(c, -x0, -y0);
+    return n;
+  }
+
   /** Zmniejsza logo w przeglądarce (max 800 × 400), zachowując przezroczystość. */
   function przygotujLogo(plik) {
     return new Promise((ok, zle) => {
@@ -212,10 +234,11 @@
         const c = document.createElement('canvas');
         c.width = Math.max(1, Math.round(sz * skala));
         c.height = Math.max(1, Math.round(wy * skala));
-        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        c.getContext('2d', { willReadFrequently: true }).drawImage(im, 0, 0, c.width, c.height);
         URL.revokeObjectURL(adres);
-        const webp = c.toDataURL('image/webp', 0.9);
-        ok(webp.startsWith('data:image/webp') ? webp : c.toDataURL('image/png'));
+        const obciety = obetnijMarginesy(c);
+        const webp = obciety.toDataURL('image/webp', 0.9);
+        ok(webp.startsWith('data:image/webp') ? webp : obciety.toDataURL('image/png'));
       };
       im.onerror = () => { URL.revokeObjectURL(adres); zle(new Error('Nie udało się odczytać tego pliku jako obrazu.')); };
       im.src = adres;

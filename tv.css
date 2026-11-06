@@ -313,10 +313,10 @@ body.koniec .partner { height: 18rem; }
 .pt-rola { flex-shrink: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 1.45rem; line-height: 1.2; letter-spacing: 0.1em; text-transform: uppercase; color: var(--turkus); margin-bottom: 0.45rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .boczny .pt-rola { font-size: 1.3rem; letter-spacing: 0.03em; }
 .zp-prawa .pt-rola, body.koniec .boczny .pt-rola { font-size: 1.8rem; letter-spacing: 0.1em; }
-.pt-tlo { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0.9rem; border-radius: 0.7rem; }
+.pt-tlo { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0.6rem; border-radius: 0.7rem; }
 .pt-tlo.jasne { background: #eceff1; box-shadow: 0 0 2rem -0.6rem rgba(42, 209, 201, 0.55); }
 .pt-tlo.ciemne { background: #15191d; border: 1px solid var(--linia); box-shadow: 0 0 2rem -0.6rem rgba(42, 209, 201, 0.55); }
-.pt-tlo img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.pt-tlo img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; } /* każde logo wypełnia kartę, także mały plik */
 /* białe lub czarne tło zapisane w pliku zlewa się z kartą */
 .pt-tlo.jasne img { mix-blend-mode: multiply; }
 .pt-tlo.ciemne img { mix-blend-mode: screen; }
