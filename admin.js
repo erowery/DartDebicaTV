@@ -157,11 +157,12 @@
     partnerzy = Array.isArray(lista) ? lista : [];
     const box = $('#lista-partnerow');
     box.textContent = '';
+    if (!partnerzy.length) box.innerHTML = '<p class="pt-pusto">Nie ma jeszcze żadnego logo. Wgraj pierwsze poniżej.</p>';
     partnerzy.forEach((p, i) => {
       const w = document.createElement('div');
-      w.className = 'pt-wiersz';
+      w.className = 'pt-wiersz' + (p.pokaz ? '' : ' schowany');
       w.innerHTML = '<div class="pt-mini"><img alt=""></div><div class="pt-pola"><b></b><input type="text" maxlength="40" list="role" aria-label="Podpis nad logo" placeholder="Bez podpisu"></div>' +
-        '<div class="pt-akcje"><label><input type="checkbox"> Pokazuj na ekranie</label><button type="button" class="drugi" data-a="tlo">Tło</button><button type="button" class="drugi" data-a="gora" aria-label="W górę">↑</button><button type="button" class="drugi" data-a="dol" aria-label="W dół">↓</button><button type="button" class="drugi" data-a="usun">Usuń</button></div>';
+        '<div class="pt-akcje"><label><input type="checkbox"> Pokazuj na ekranie</label><button type="button" class="drugi" data-a="tlo">Tło</button><button type="button" class="drugi" data-a="gora" aria-label="W górę">↑</button><button type="button" class="drugi" data-a="dol" aria-label="W dół">↓</button><button type="button" class="drugi" data-a="usun">Usuń na stałe</button></div>';
       const mini = w.querySelector('.pt-mini');
       mini.classList.add(p.tlo === 'ciemne' ? 'ciemne' : 'jasne');
       w.querySelector('img').src = '/api/logo?plik=' + encodeURIComponent(p.id);
@@ -180,7 +181,7 @@
       w.querySelector('[data-a=gora]').addEventListener('click', () => przesun(-1));
       w.querySelector('[data-a=dol]').addEventListener('click', () => przesun(1));
       w.querySelector('[data-a=usun]').addEventListener('click', async () => {
-        if (!confirm('Usunąć „' + p.nazwa + '” razem z logo?')) return;
+        if (!confirm('Usunąć „' + p.nazwa + '” na stałe? Trzeba będzie wgrać logo od nowa.\n\nŻeby tylko schować je z ekranu, odznacz „Pokazuj na ekranie”.')) return;
         wynikPartnerow(await api({ akcja: 'partner-usun', id: p.id }), 'Usunięto.');
       });
       box.appendChild(w);
@@ -246,6 +247,7 @@
       const j = await api({ akcja: 'partner-dodaj', obraz, nazwa: $('#pt-nazwa').value, rola: $('#pt-rola').value, tlo: $('#pt-tlo').value });
       if (wynikPartnerow(j, 'Dodano.')) {
         e.target.reset();
+        $('#nowe-logo').open = false;
         $('#pt-podglad').hidden = true;
       }
     } catch (err) {

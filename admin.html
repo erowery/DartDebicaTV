@@ -43,7 +43,12 @@
     .stan-gh.ok { border-color: rgba(42,209,201,.35); color: var(--turkus); }
     .stan-gh.blad { border-color: rgba(255,107,107,.6); background: rgba(255,107,107,.08); color: var(--czerw); font-weight: 600; }
     select, input[type=file] { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--linia); background: var(--tlo); color: var(--tekst); font: inherit; }
-    #lista-partnerow:not(:empty) { margin-top: 12px; }
+    .pt-naglowek { margin: 14px 0 0; font-size: 14px; }
+    .pt-pusto { padding: 10px 0; font-size: 14px; color: var(--szary); }
+    #nowe-logo { margin-top: 12px; }
+    #nowe-logo summary { display: block; cursor: pointer; padding: 10px 14px; border: 1px solid var(--linia); border-radius: 10px; text-align: center; font-weight: 600; list-style: none; }
+    #nowe-logo summary::-webkit-details-marker { display: none; }
+    .pt-wiersz.schowany .pt-mini { opacity: 0.45; }
     .pt-wiersz { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px 12px; padding: 12px 0; border-top: 1px solid var(--linia); }
     .pt-mini { width: 76px; height: 52px; border-radius: 6px; padding: 4px; display: flex; align-items: center; justify-content: center; }
     .pt-mini img, .pt-podglad img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
@@ -55,7 +60,7 @@
     .pt-akcje { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .pt-akcje label { margin: 0 auto 0 0; display: flex; align-items: center; gap: 8px; font-weight: 500; }
     .pt-akcje button { padding: 8px 12px; font-size: 14px; min-width: 40px; }
-    #form-partner { margin-top: 8px; padding-top: 4px; border-top: 1px solid var(--linia); }
+    #form-partner { margin-top: 8px; }
     .podglad-tv { display: none; }
     .naglowek-prawy { display: none; }
     [hidden] { display: none !important; }
@@ -139,8 +144,11 @@
 
         <section class="karta" id="partnerzy">
           <h2>Partnerzy wydarzenia</h2>
-          <p class="pomoc" style="margin:0">Sponsorzy, współorganizatorzy, gospodarz. Włączone loga widać na ekranie meczów, w zapowiedzi i na planszy końcowej.</p>
+          <p class="pomoc" style="margin:0">Wgrane logo zostaje tu na stałe. Przed turniejem zaznacz tylko te, które mają być widoczne na ekranie.</p>
+          <h3 class="pt-naglowek">Zapisane loga</h3>
           <div id="lista-partnerow"></div>
+          <details id="nowe-logo">
+          <summary class="drugi">+ Wgraj nowe logo</summary>
           <form id="form-partner">
             <label for="pt-plik">Logo (PNG, JPG, WebP lub SVG)</label>
             <input type="file" id="pt-plik" accept="image/png,image/jpeg,image/webp,image/svg+xml" required>
@@ -154,8 +162,9 @@
             <label for="pt-tlo">Tło logo</label>
             <select id="pt-tlo"><option value="jasne">Jasne</option><option value="ciemne">Ciemne (dla jasnych logotypów)</option></select>
             <div class="przyciski"><button class="glowny" type="submit" id="pt-dodaj">Dodaj</button></div>
-            <p class="komunikat" id="kom-partner"></p>
           </form>
+          </details>
+          <p class="komunikat" id="kom-partner"></p>
         </section>
 
         <section class="karta">
