@@ -8,7 +8,6 @@
   const ODSWIEZ_TURNIEJ_MS = 60000; // nazwa turnieju i statystyki
   const ODSWIEZ_USTAWIENIA_MS = 20000; // czy admin nie zmienił turnieju
   const CZAS_STRONY_MS = 15000; // gdy mecze się nie mieszczą – zmiana strony
-  const CZAS_WYSKOKU_MS = 6500;
   const SZYBKI_LEG = 18;
   const OKNO_TURNIEJU_S = 14 * 3600; // gdy Nakka nie podaje daty turnieju: mecze starsze niż 14 h pomijamy
   const PRZED_DATA_S = 12 * 3600; // mecze wcześniejsze niż 12 h przed datą turnieju (np. testowe) pomijamy
@@ -1181,32 +1180,54 @@
   /* ---------------- wyskakujące okienko ---------------- */
 
   const OPIS = {
-    '180': { duzy: '180', rodzaj: 'Max!', klasa: '' },
-    '171': { duzy: '171', rodzaj: 'Runda', klasa: 'turkus' },
-    hf: { rodzaj: 'High finish', klasa: '' },
-    bl: { rodzaj: 'Szybki leg', klasa: 'turkus' },
+    '180': { duzy: '180', rodzaj: 'Max!', klasa: 'typ-180', czas: 10000, iskry: 28 },
+    '171': { duzy: '171', rodzaj: '', klasa: 'typ-turkus', czas: 8000, iskry: 14 },
+    hf: { rodzaj: 'High finish', klasa: 'typ-zloto', czas: 8000, iskry: 14 },
+    bl: { rodzaj: 'Szybki leg', klasa: 'typ-turkus', czas: 8000, iskry: 14 },
   };
+  const CZAS_WYSKOKU_KOLEJKA_MS = 6000; // gdy czeka kilka następnych, żeby kolejka nie uciekała od turnieju
+
+  function iskry(ile) {
+    let h = '';
+    for (let i = 0; i < ile; i++) {
+      const kat = (i / ile) * Math.PI * 2 + Math.random() * 0.25;
+      const dal = 22 + Math.random() * 20;
+      h += '<i class="ws-iskra" style="--x:' + (Math.cos(kat) * dal * 1.5).toFixed(1) + 'rem;--y:' + (Math.sin(kat) * dal).toFixed(1) + 'rem;--op:' + (Math.random() * 0.35).toFixed(2) + 's"></i>';
+    }
+    return h;
+  }
+
   function pokazWyskok() {
     if (stan.wyskokTrwa || !stan.wyskoki.length) return;
     const z = stan.wyskoki.shift();
     stan.wyskokTrwa = true;
     const o = OPIS[z.typ];
+    const czas = stan.wyskoki.length >= 2 ? CZAS_WYSKOKU_KOLEJKA_MS : o.czas;
     const duzy = o.duzy || (z.typ === 'bl' ? z.w + '<small style="font-size:.45em"> lotka</small>' : z.w);
     const el = document.createElement('div');
-    el.className = 'wyskok';
-    el.innerHTML = '<span class="duzy">' + duzy + '</span><span class="opis"><span class="rodzaj">' + o.rodzaj + '</span>' +
-      '<span class="kto">' + esc(z.nazwa) + '</span>' + (z.rywal ? '<span class="vs">vs ' + esc(z.rywal) + '</span>' : '') + '</span>';
+    el.className = 'ws-scena ' + o.klasa;
+    el.innerHTML = '<div class="ws-cien"></div><div class="ws-promienie"></div><div class="ws-pierscien"></div><div class="ws-pierscien drugi"></div>' + iskry(o.iskry) +
+      '<div class="wyskok"><span class="duzy">' + duzy + '</span><span class="opis">' + (o.rodzaj ? '<span class="rodzaj">' + o.rodzaj + '</span>' : '') +
+      '<span class="kto">' + esc(z.nazwa) + '</span>' + (z.rywal ? '<span class="vs">vs ' + esc(z.rywal) + '</span>' : '') + '</span></div>';
     const w = $('#wyskok');
     w.innerHTML = '';
     w.appendChild(el);
+    stan.akcje.set(z.mid, Date.now() + czas + 2000);
     rysujMecze(); // podświetlenie karty
-    setTimeout(() => el.classList.add('znika'), CZAS_WYSKOKU_MS);
+    setTimeout(() => el.classList.add('znika'), czas);
     setTimeout(() => {
       el.remove();
       stan.wyskokTrwa = false;
       if (stan.wyskoki.length) pokazWyskok();
       else rysujMecze();
-    }, CZAS_WYSKOKU_MS + 450);
+    }, czas + 450);
+  }
+
+  // Podgląd efektów bez turnieju: tvdart.vercel.app/?efekty=1
+  function pokazEfekty() {
+    const baza = { nazwa: 'Kowalski Adam', rywal: 'Nowak Piotr', mid: 'pokaz', tpid: 'pokaz' };
+    stan.wyskoki.push({ ...baza, typ: '180' }, { ...baza, typ: 'hf', w: 141 }, { ...baza, typ: '171' }, { ...baza, typ: 'bl', w: 15 });
+    pokazWyskok();
   }
 
   /* ---------------- zegar, pełny ekran, kursor, wygaszacz ---------------- */
@@ -1268,4 +1289,5 @@
     zablokujWygaszanie();
   }
   start();
+  if (new URLSearchParams(location.search).get("efekty")) setTimeout(pokazEfekty, 1500);
 })();
