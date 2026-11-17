@@ -99,17 +99,73 @@
     return { r, start: start > 0 ? start : 501 };
   }
 
-  /** Wydarzenia z meczu: 180, 171, szybki leg (do 18 lotki), high finish (100+). */
+  /* ---------------- turniej drużynowy ---------------- */
+  // Tylko gdy turniej w Nakka ma team_games = 1. W singlu nic z tego się nie włącza.
+
+  function druzynowy() {
+    return Number(stan.turniej && stan.turniej.team_games) === 1;
+  }
+
+  /** Skład jednej strony z Nakka ([{oid, name}, …]) → { klucz, nazwa } albo null. Debel: „A / B”. */
+  function sklad(order) {
+    const os = (Array.isArray(order) ? order : []).filter((o) => o && o.name);
+    if (!os.length) return null;
+    return { klucz: 'o:' + os.map((o) => o.oid || o.name).join('+'), nazwa: os.map((o) => String(o.name).trim()).join(' / ') };
+  }
+
+  /** Grający zawodnicy obu stron [lewy, prawy] – z match/live (d.zawodnicy) albo z match/get (statsData[].order). */
+  function zawodnicyMeczu(d) {
+    if (!druzynowy() || !d) return [null, null];
+    if (Array.isArray(d.zawodnicy)) return d.zawodnicy;
+    return [0, 1].map((p) => sklad(d.statsData && d.statsData[p] && d.statsData[p].order));
+  }
+
+  /** match/live jednego meczu: { remisy, zawodnicy } albo null. */
+  async function pobierzLiveMeczu(mid) {
+    const j = await pobierzJson('/match/live?mid=' + encodeURIComponent(mid), 6000);
+    const f = j.format || {};
+    const z = (j.players || []).map((x) => sklad(x && x.order));
+    return {
+      remisy: f.draw_mode === undefined ? undefined : Number(f.draw_mode) === 1,
+      zawodnicy: z.some(Boolean) ? [z[0] || null, z[1] || null] : null,
+    };
+  }
+
+  /** Format (remisy) i skład trwającego meczu. Raz na mecz; w drużynówce co minutę (kolejność może się zmienić przed legiem). */
+  async function pobierzLive(w) {
+    if (w.liveCzas && Date.now() - w.liveCzas < (w.liveOk && !druzynowy() ? Infinity : 60000)) return;
+    w.liveCzas = Date.now();
+    try {
+      const l = await pobierzLiveMeczu(w.mid);
+      w.liveOk = true;
+      if (l.remisy !== undefined && l.remisy !== w.remisy) { w.remisy = l.remisy; stan.doNarysowania = true; }
+      if (l.zawodnicy) { w.zawodnicy = l.zawodnicy; stan.doNarysowania = true; }
+    } catch (e) { /* spróbujemy za minutę */ }
+  }
+
+  /** Skończony mecz drużynowy bez składu w match/get – skład z match/live. */
+  async function uzupelnijSklad(mid, d) {
+    if (!druzynowy() || zawodnicyMeczu(d).some(Boolean)) return;
+    try {
+      const l = await pobierzLiveMeczu(mid);
+      if (l.zawodnicy) d.zawodnicy = l.zawodnicy;
+    } catch (e) { /* zostaje nazwa drużyny */ }
+  }
+
+  /** Wydarzenia z meczu: 180, 171, szybki leg (do 18 lotki), high finish (100+). W drużynówce przypisane do zawodnika. */
   function wydarzeniaMeczu(mid, d) {
     const st = d.statsData || [];
     if (st.length < 2 || !Array.isArray(d.legData)) return [];
     const skip = pomijacPierwszy(d);
+    const zaw = zawodnicyMeczu(d);
+    zaw.forEach((z) => { if (z) stan.imiona[z.klucz] = z.nazwa; });
     const out = [];
     d.legData.forEach((leg, li) => {
       [0, 1].forEach((p) => {
         const { r, start } = rundy(leg, p, skip);
         const ja = st[p] || {}, on = st[1 - p] || {};
-        const baza = { mid, tpid: ja.tpid || '', nazwa: ja.name || 'Gracz', rywal: on.name || '' };
+        const z = zaw[p];
+        const baza = { mid, p, tpid: z ? z.klucz : ja.tpid || '', nazwa: z ? z.nazwa : ja.name || 'Gracz', rywal: on.name || '' };
         const k = (typ, left) => mid + '|' + li + '|' + p + '|' + typ + '|' + left;
         for (let i = 0; i < r.length; i++) {
           const sc = Number(r[i].score), left = Number(r[i].left);
@@ -279,6 +335,7 @@
           try {
             const j = await pobierzJson('/match/get?mid=' + encodeURIComponent(m.mid));
             const d = j.match || j;
+            if (d && d.legData) await uzupelnijSklad(m.mid, d);
             if (d && d.legData && tdid === stan.tdid) {
               przyjmijZdarzenia(wydarzeniaMeczu(m.mid, d), true);
               stan.przeanalizowane.add(m.mid);
@@ -347,6 +404,9 @@
         if (w.limitSet) stan.doNarysowania = true;
       }).catch(() => { w.limitSet = undefined; });
     }
+    // drużynówka: najpierw skład (żeby wyróżnienia trafiły do zawodnika); singiel: tylko format, w tle
+    if (druzynowy() && !w.zawodnicy) await pobierzLive(w);
+    else pobierzLive(w);
     let d = null;
     try {
       const v = await pobierzWidok(w.mid);
@@ -363,6 +423,7 @@
       } catch (e2) { d = null; }
     }
     if (!d) return false;
+    if (w.zawodnicy) d.zawodnicy = w.zawodnicy;
     w.szczegoly = d;
     przyjmijZdarzenia(wydarzeniaMeczu(w.mid, d));
     stan.doNarysowania = true;
@@ -461,7 +522,7 @@
         try {
           const j = await pobierzJson('/match/get?mid=' + encodeURIComponent(m.mid));
           const d = j.match || j;
-          if (d && d.legData) { przyjmijZdarzenia(wydarzeniaMeczu(m.mid, d), true); stan.przeanalizowane.add(m.mid); }
+          if (d && d.legData) { await uzupelnijSklad(m.mid, d); przyjmijZdarzenia(wydarzeniaMeczu(m.mid, d), true); stan.przeanalizowane.add(m.mid); }
         } catch (e) { /* następnym razem */ }
       }));
       const obecne = new Set();
@@ -560,8 +621,8 @@
   }
   const NA_STRONIE = 16;
 
-  function chipy(mid, tpid) {
-    const z = stan.zdarzenia.filter((e) => e.mid === mid && e.tpid === tpid);
+  function chipy(mid, p) {
+    const z = stan.zdarzenia.filter((e) => e.mid === mid && e.p === p);
     const ile = (t) => z.filter((e) => e.typ === t).length;
     const out = [];
     if (ile('180')) out.push('<span class="chip c180">180' + (ile('180') > 1 ? '×' + ile('180') : '') + '</span>');
@@ -606,12 +667,18 @@
 
   /** Napis „Best of 5” (przy meczu na sety „12 setów” – gra się stałą liczbę setów, z remisami); pusty, gdy nie ma tej informacji. */
   function bestOfNapis(w, sety) {
+    // remisy (draw_mode z match/live): stała liczba setów/legów, np. „12 setów”, „Best of 2”
     if (sety) {
       const ile = Number(w.limitSet);
-      return ile > 0 ? (2 * ile) + ' setów' : '';
+      if (!(ile > 0)) return '';
+      return w.remisy === false ? 'Best of ' + (2 * ile - 1) + ' sety' : (2 * ile) + ' ' + odmianaSetow(2 * ile);
     }
     const legi = legiDoWygranej(w);
-    return legi > 0 ? 'Best of ' + (2 * legi - 1) : '';
+    if (!(legi > 0)) return '';
+    return 'Best of ' + (w.remisy === true ? 2 * legi : 2 * legi - 1);
+  }
+  function odmianaSetow(n) {
+    return n === 1 ? 'set' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'sety' : 'setów';
   }
 
   /** Czy mecz jest grany na sety (ustawienie meczu w Nakka albo wygrany już jakiś set). */
@@ -647,6 +714,8 @@
     const d = w.szczegoly || m;
     const st = (d.statsData && d.statsData.length >= 2 ? d.statsData : m.statsData) || [];
     const leg = w.szczegoly ? stanLega(w.szczegoly) : null;
+    const druz = druzynowy();
+    const zawM = druz ? (w.zawodnicy || zawodnicyMeczu(w.szczegoly)) : [null, null];
     const sety = naSety(w, st);
     const legiA = Number(st[0] && st[0].winLegs) || 0, legiB = Number(st[1] && st[1].winLegs) || 0;
     const setyA = Number(st[0] && st[0].winSets) || 0, setyB = Number(st[1] && st[1].winSets) || 0;
@@ -659,18 +728,18 @@
       const sr = (w.szczegoly && sredniaZLegow(w.szczegoly, p)) || srednia(s);
       const pod = [sr ? 'śr. ' + sr : '', g && g.ostatnio !== null ? 'ostatnio ' + g.ostatnio : ''].filter(Boolean).join(' · ');
       const wynik = sety
-        ? '<span class="k-box k-set' + (mojeS > jegoS ? ' prow' : '') + '"><small>Sety</small>' + mojeS + '</span>' +
+        ? '<span class="k-box k-set' + (mojeS > jegoS ? ' prow' : '') + '"><small>' + (druz ? 'Mecze' : 'Sety') + '</small>' + mojeS + '</span>' +
           '<span class="k-box' + (moje > jego ? ' prow' : '') + '"><small>Legi</small>' + moje + '</span>'
         : '<span class="k-legi">' + moje + '</span>';
       return '<div class="k-gracz' + (leg && leg.rzuca === p ? ' rzuca' : '') + (moje > jego ? ' prowadzi' : '') + '">' +
-        '<div class="k-kto">' + nazwyHtml(s.name || 'Gracz ' + (p + 1)) +
-        '<span class="k-pod"><span>' + esc(pod) + '</span>' + chipy(w.mid, s.tpid) + '</span></div>' +
+        '<div class="k-kto">' + nazwyHtml(s.name || 'Gracz ' + (p + 1)) + (zawM[p] ? '<span class="k-zaw">' + esc(zawM[p].nazwa) + '</span>' : '') +
+        '<span class="k-pod"><span>' + esc(pod) + '</span>' + chipy(w.mid, p) + '</span></div>' +
         '<span class="k-zostalo">' + (g ? g.zostalo : '') + '</span>' + wynik + '</div>';
     };
     const f = faza(m);
-    const ktory = sety ? 'Set ' + (setyA + setyB + 1) + ' · Leg ' + (legiA + legiB + 1) : leg ? 'Leg ' + leg.numer : '';
+    const ktory = sety && !druz ? 'Set ' + (setyA + setyB + 1) + ' · Leg ' + (legiA + legiB + 1) : leg ? 'Leg ' + leg.numer : '';
     return '<article class="karta' + (sety ? ' setowa' : '') + (akcja ? ' akcja' : '') + '">' +
-      '<div class="k-gora"><span class="k-faza">' + esc(f || 'Mecz') + '</span><span class="k-format">' + [bestOfNapis(w, sety), ktory].filter(Boolean).join(' · ') + '</span></div>' +
+      '<div class="k-gora"><span class="k-faza">' + esc(f || 'Mecz') + '</span><span class="k-format">' + [bestOfNapis(w, sety && !druz), ktory].filter(Boolean).join(' · ') + '</span></div>' +
       gracz(0) + gracz(1) + '</article>';
   }
 

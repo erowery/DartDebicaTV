@@ -64,6 +64,7 @@ h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 2
 .k-gracz.rzuca { background: rgba(42, 209, 201, 0.09); }
 .k-gracz.rzuca::before { content: ''; position: absolute; left: 0; top: 18%; bottom: 18%; width: calc(0.3rem * var(--s)); border-radius: 0.3rem; background: var(--turkus); box-shadow: 0 0 0.8rem var(--turkus); }
 .k-kto { min-width: 0; }
+.k-zaw { display: block; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: calc(1.3rem * var(--s)); line-height: 1.1; color: var(--turkus); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* drużynówka: grający zawodnik pod nazwą drużyny */
 .k-nazwa { display: block; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: calc(2.05rem * var(--s)); line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .k-pod { display: flex; flex-wrap: wrap; align-items: center; column-gap: calc(0.45rem * var(--s)); row-gap: 0.5rem; height: calc(1.45rem * var(--s)); margin-top: calc(0.15rem * var(--s)); font-size: calc(1.05rem * var(--s)); color: var(--szary); overflow: hidden; font-variant-numeric: tabular-nums; }
 .k-pod > span:first-child:not(.chip) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

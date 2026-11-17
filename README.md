@@ -4,6 +4,7 @@ Ekran pod telewizor: mecze na żywo z jednego turnieju w Nakka (n01darts) z wyr�
 
 - `/` – ekran TV (1920×1080, skaluje się do każdego ekranu). Gdy mecze się nie mieszczą, strony zmieniają się co 15 s. Na dole przewija się pasek z wynikami wszystkich meczów.
 - `/admin` – panel: wklejasz link do turnieju z Nakka, ekran przełącza się w ok. 20 s (bez przebudowy strony).
+- Turniej drużynowy (w Nakka `team_games` = 1): na karcie nazwa drużyny i pod nią grający zawodnik (z `match/live`), wyróżnienia przypisane do zawodników. Singiel działa jak dotąd.
 - Do testów: `/?t=t_XXXX_1234` pokazuje dany turniej bez zmiany ustawień; dopisz `&test=1`, żeby pokazać też mecze sprzed daty turnieju w Nakka (np. test kilka dni przed turniejem).
 
 ## Vercel – zmienne środowiskowe
