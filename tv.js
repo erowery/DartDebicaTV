@@ -21,6 +21,7 @@
     return Date.now() / 1000 - OKNO_TURNIEJU_S;
   }
   const HIGH_FINISH = 100;
+  const DEBUG = new URLSearchParams(location.search).get('debug') === '1';
 
   const $ = (s) => document.querySelector(s);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -58,6 +59,7 @@
     staty: {}, // tpid -> statystyki turnieju (ton80, highOut, best)
     mecze: new Map(), // mid -> { lista, szczegoly, podpis, ostatnioPobrany, kolejnosc }
     zdarzenia: [], // wszystkie wykryte wydarzenia
+    debugLive: {}, // ?debug=1: surowe odpowiedzi match/live
     widziane: new Set(),
     przeanalizowane: new Set(),
     archiwum: [], // wszystkie mecze turnieju (match/list zwraca na żywo najwyżej 100 ostatnich)
@@ -103,7 +105,7 @@
   // Tylko gdy turniej w Nakka ma team_games = 1. W singlu nic z tego się nie włącza.
 
   function druzynowy() {
-    return Number(stan.turniej && stan.turniej.team_games) === 1;
+    return Number(stan.turniej && stan.turniej.team_games) === 1 || !!stan.wykrytoDruzyne;
   }
 
   /** Skład jednej strony z Nakka ([{oid, name}, …]) → { klucz, nazwa } albo null. Debel: „A / B”. */
@@ -125,6 +127,9 @@
     const j = await pobierzJson('/match/live?mid=' + encodeURIComponent(mid), 6000);
     const f = j.format || {};
     const z = (j.players || []).map((x) => sklad(x && x.order));
+    // drużynówka rozpoznana po meczu: skład zawodników inny niż nazwa strony (drużyny)
+    if ((j.players || []).some((x, i) => z[i] && z[i].nazwa !== String((x && x.name) || '').trim())) stan.wykrytoDruzyne = true;
+    if (DEBUG) stan.debugLive[mid] = { players: j.players, format: j.format, changed: j.changed, result: j.result };
     return {
       remisy: f.draw_mode === undefined ? undefined : Number(f.draw_mode) === 1,
       zawodnicy: z.some(Boolean) ? [z[0] || null, z[1] || null] : null,
@@ -135,12 +140,13 @@
   async function pobierzLive(w) {
     if (w.liveCzas && Date.now() - w.liveCzas < (w.liveOk && !druzynowy() ? Infinity : 60000)) return;
     w.liveCzas = Date.now();
+    w.liveBlad = '';
     try {
       const l = await pobierzLiveMeczu(w.mid);
       w.liveOk = true;
       if (l.remisy !== undefined && l.remisy !== w.remisy) { w.remisy = l.remisy; stan.doNarysowania = true; }
       if (l.zawodnicy) { w.zawodnicy = l.zawodnicy; stan.doNarysowania = true; }
-    } catch (e) { /* spróbujemy za minutę */ }
+    } catch (e) { w.liveBlad = String((e && e.message) || e); /* spróbujemy za minutę */ }
   }
 
   /** Skończony mecz drużynowy bez składu w match/get – skład z match/live. */
@@ -405,7 +411,8 @@
       }).catch(() => { w.limitSet = undefined; });
     }
     // drużynówka: najpierw skład (żeby wyróżnienia trafiły do zawodnika); singiel: tylko format, w tle
-    if (druzynowy() && !w.zawodnicy) await pobierzLive(w);
+    // pierwsze pobranie meczu zawsze czeka na match/live – tak rozpoznajemy drużynówkę, zanim policzymy wyróżnienia
+    if (!w.liveCzas || (druzynowy() && !w.zawodnicy)) await pobierzLive(w);
     else pobierzLive(w);
     let d = null;
     try {
@@ -1366,4 +1373,25 @@
   }
   start();
   if (new URLSearchParams(location.search).get("efekty")) setTimeout(pokazEfekty, 1500);
+
+  /* ?debug=1 – podgląd danych z Nakka na ekranie (do sprawdzania turniejów drużynowych) */
+  if (DEBUG) {
+    const box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:99999;max-width:70vw;max-height:60vh;overflow:auto;background:rgba(0,0,0,.92);color:#9f9;font:12px/1.35 monospace;padding:10px;border:1px solid #2ad1c9;white-space:pre-wrap;';
+    document.body.appendChild(box);
+    setInterval(() => {
+      const t = stan.turniej || {};
+      const klucze = Object.keys(t).filter((k) => /team|order|setting/i.test(k));
+      const info = {
+        tdid: stan.tdid,
+        team_games: t.team_games,
+        pola_turnieju: klucze,
+        wykrytoDruzyne: !!stan.wykrytoDruzyne,
+        druzynowy: druzynowy(),
+        mecze: Array.from(stan.mecze.values()).map((w) => ({ mid: w.mid, liveOk: !!w.liveOk, liveBlad: w.liveBlad || '', remisy: w.remisy, zawodnicy: w.zawodnicy || null, statsOrder: (w.lista && w.lista.statsData || []).map((x) => x.order) })),
+        match_live: stan.debugLive,
+      };
+      box.textContent = JSON.stringify(info, null, 1);
+    }, 2000);
+  }
 })();
