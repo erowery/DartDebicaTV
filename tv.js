@@ -14,6 +14,8 @@
 
   /** Od kiedy liczą się mecze turnieju (sekundy). Turniej może trwać kilka dni. */
   function poczatekTurnieju() {
+    // tryb testowy (?test=1): wszystkie mecze turnieju, bez względu na datę w Nakka
+    if (new URLSearchParams(location.search).get('test') === '1') return 0;
     const td = Number(stan.turniej && stan.turniej.t_date);
     if (td > 0) return td - PRZED_DATA_S;
     return Date.now() / 1000 - OKNO_TURNIEJU_S;
@@ -205,6 +207,9 @@
     ustawPartnerow(u.partnerzy);
     ustawMargines(u.margines);
     if (tdid !== stan.tdid) {
+      // zmiana turnieju na działającym ekranie: przeładowanie strony, żeby zapytania
+      // do Nakka rozpoczęte dla poprzedniego turnieju nie dopisały jego meczów i wyróżnień
+      if (stan.tdid !== null) { location.reload(); return; }
       // nowy turniej – zaczynamy od zera
       stan.tdid = tdid;
       stan.tytul = '';
@@ -599,11 +604,11 @@
     return Number((g && g.limit_leg_count) || ts.limit_leg_count) || 0;
   }
 
-  /** Napis „Best of 5” (przy meczu na sety „Best of 3 sety”); pusty, gdy nie ma tej informacji. */
+  /** Napis „Best of 5” (przy meczu na sety „12 setów” – gra się stałą liczbę setów, z remisami); pusty, gdy nie ma tej informacji. */
   function bestOfNapis(w, sety) {
     if (sety) {
       const ile = Number(w.limitSet);
-      return ile > 0 ? 'Best of ' + (2 * ile - 1) + ' sety' : '';
+      return ile > 0 ? (2 * ile) + ' setów' : '';
     }
     const legi = legiDoWygranej(w);
     return legi > 0 ? 'Best of ' + (2 * legi - 1) : '';
@@ -1137,7 +1142,9 @@
     const sekcja = (typ, tytul, dane, malejaco, format) => {
       // 180 i 171: liczba na zawodnika; High finish i Best leg: lista osiągnięć
       const wpisy = Array.isArray(dane) ? dane : Object.entries(dane).map(([tpid, v]) => ({ tpid, w: v, ile: 1 }));
-      const wiersze = wpisy.map((x) => ({ ...x, n: nazwa(x.tpid, naz[x.tpid]) })).filter((x) => x.n)
+      // tylko zawodnicy zapisani do tego turnieju (gdy lista zapisanych jest już wczytana)
+      const zapisani = Object.keys(stan.imiona).length > 0;
+      const wiersze = wpisy.filter((x) => !zapisani || stan.imiona[x.tpid]).map((x) => ({ ...x, n: nazwa(x.tpid, naz[x.tpid]) })).filter((x) => x.n)
         .sort((a, b) => (malejaco ? b.w - a.w : a.w - b.w) || b.ile - a.ile || a.n.localeCompare(b.n, 'pl'));
       const html = wiersze.map((x) => {
         const nowy = stan.nowe.has(typ + '|' + x.tpid);
